@@ -1,0 +1,43 @@
+# Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
+# checkout v5, setup-node v5, pnpm/action-setup v4, docker/setup-qemu-action v3,
+# docker/setup-buildx-action v3, docker/build-push-action v6.
+# No AWS credentials and no id-token permission, by design.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pipx install pre-commit
+      - run: pre-commit run --all-files --hook-stage pre-commit
+      - run: pre-commit run --all-files --hook-stage pre-push
+
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

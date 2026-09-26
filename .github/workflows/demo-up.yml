@@ -1,0 +1,112 @@
+# Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
+# checkout v5, setup-node v5, pnpm/action-setup v4, docker/setup-qemu-action v3,
+# docker/setup-buildx-action v3, docker/build-push-action v6,
+# aws-actions/configure-aws-credentials v5, aws-actions/amazon-ecr-login v2, actions/upload-artifact v5.
+#
+# Consent gate: the only workflow that deploys the app stack. Approval happens on the
+# `demo` Environment. The smoke job has no AWS access and no Environment.
+name: demo-up
+
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: Hours the app stack may run (the reaper deletes it at expiry)
+        type: choice
+        options: ['1', '2', '3', '4', '5', '6', '7', '8']
+        default: '2'
+
+permissions: {}
+
+concurrency:
+  group: demo
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: demo
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      site_url: ${{ steps.deploy.outputs.site_url }}
+      expires_at: ${{ steps.deploy.outputs.expires_at }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.DEMO_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/supplier-line-host:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: deploy
+        env:
+          HOURS: ${{ inputs.hours }}
+        run: |
+          expires_at=$(date -u -d "+${HOURS} hours" +%Y-%m-%dT%H:%M:%SZ)
+          pnpm --filter infra exec cdk deploy AppStack \
+            --require-approval never \
+            -c expiresAt="$expires_at" -c imageTag="$GITHUB_SHA"
+          site_url=$(aws cloudformation describe-stacks --stack-name supplier-line-app \
+            --query "Stacks[0].Outputs[?OutputKey=='SiteUrl'].OutputValue" --output text)
+          echo "expires_at=$expires_at" >> "$GITHUB_OUTPUT"
+          echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
+      # cdk deploy returns only after the Fargate service is stable; this waits for CloudFront.
+      - env:
+          SITE_URL: ${{ steps.deploy.outputs.site_url }}
+        run: curl --fail --silent --show-error --retry 30 --retry-delay 10 --retry-all-errors --output /dev/null "$SITE_URL"
+      - env:
+          SITE_URL: ${{ steps.deploy.outputs.site_url }}
+          EXPIRES_AT: ${{ steps.deploy.outputs.expires_at }}
+        run: |
+          echo "### Demo is up" >> "$GITHUB_STEP_SUMMARY"
+          echo "- URL: $SITE_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Expires at: $EXPIRES_AT (UTC)" >> "$GITHUB_STEP_SUMMARY"
+
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Placeholder: S16 adds the `replay-clips` script to packages/scripts.
+      - env:
+          SITE_URL: ${{ needs.deploy.outputs.site_url }}
+          DEMO_ACCESS_CODE: ${{ secrets.DEMO_ACCESS_CODE }}
+        run: pnpm --filter scripts run replay-clips -- --url "$SITE_URL" --out traces/live
+      - if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: live-traces
+          path: traces/live
+          if-no-files-found: warn
+      - run: pnpm check:traces
