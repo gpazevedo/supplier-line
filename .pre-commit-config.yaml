@@ -1,0 +1,91 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        types: [file]
+        files: |
+          (?x)^(
+            .*\.tsx?|
+            .*\.json|
+            .*\.ya?ml|
+            .*\.md
+          )$
+        exclude: ^(node_modules|pnpm-lock\.yaml)
+        stages: [pre-commit]
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.15.0
+    hooks:
+      - id: eslint
+        files: \.tsx?$
+        exclude: ^node_modules
+        args: ['--fix']
+        stages: [pre-commit]
+        additional_dependencies:
+          - '@eslint/js'
+          - 'eslint-config-prettier'
+          - 'typescript-eslint'
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(node_modules|pnpm-lock\.yaml)
+        stages: [pre-commit]
+      - id: end-of-file-fixer
+        exclude: ^(node_modules|pnpm-lock\.yaml)
+        stages: [pre-commit]
+      - id: check-merge-conflict
+        exclude: ^(node_modules|pnpm-lock\.yaml)
+        stages: [pre-commit]
+      - id: check-yaml
+        exclude: ^(node_modules|pnpm-lock\.yaml)
+        stages: [pre-commit]
+      - id: check-json
+        exclude: ^(node_modules|pnpm-lock\.yaml)
+        stages: [pre-commit]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        exclude: ^node_modules
+        stages: [pre-commit]
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.3
+    hooks:
+      - id: actionlint
+        exclude: ^node_modules
+        stages: [pre-commit]
+
+  - repo: local
+    hooks:
+      - id: pnpm-typecheck
+        name: pnpm typecheck
+        entry: pnpm typecheck
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: pnpm-test
+        name: pnpm test
+        entry: pnpm test
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: pnpm-cdk-check
+        name: pnpm cdk:check
+        entry: pnpm cdk:check
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      - id: pnpm-check-traces
+        name: pnpm check:traces
+        entry: pnpm check:traces
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

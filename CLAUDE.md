@@ -23,32 +23,32 @@ English-only voice agent that answers purchase-order status, built on Amazon Nov
 
 Caller clips live in `fixtures/clips/` as 16 kHz, 16-bit, mono WAV:
 
-| File | Content |
-| --- | --- |
-| `po-status-a.wav` | PO-status question for a PO from the generated data |
-| `po-status-b.wav` | Same question, different PO |
-| `interrupt.wav` | "Wait, stop" |
-| `followup-delivery.wav` | "And the delivery date?" |
-| `silence-3s.wav` | 3 seconds of silence |
+| File                    | Content                                             |
+| ----------------------- | --------------------------------------------------- |
+| `po-status-a.wav`       | PO-status question for a PO from the generated data |
+| `po-status-b.wav`       | Same question, different PO                         |
+| `interrupt.wav`         | "Wait, stop"                                        |
+| `followup-delivery.wav` | "And the delivery date?"                            |
+| `silence-3s.wav`        | 3 seconds of silence                                |
 
 The two PO codes spoken in the clips are listed in `fixtures/clips/README.md` and must exist in S02's deterministic data.
 
 ## Decisions
 
-| Decision | Choice |
-| --- | --- |
-| Hosting | AWS `us-east-1`: CloudFront, ALB, Fargate (ARM64), S3, Lambda, Bedrock, Amazon Connect |
-| Infrastructure | CDK in TypeScript: persistent stack (no hourly charges) and app stack (only during approved windows) |
-| Consent | App stack deploys only through `demo-up`, gated by approval in GitHub Environment `demo`; window 1–8 hours |
-| Enforcement | Reaper Lambda deletes the app stack at expiry, on a missing or malformed tag, or 8 hours after creation |
-| CI | `ci.yml` runs every pre-commit hook plus the ARM64 image build, with no AWS credentials |
-| Language | English (en-US) only |
-| Stack | TypeScript, from AWS's `websocket-nodejs` Nova 2 Sonic sample; model `amazon.nova-2-sonic-v1:0` |
-| Build platform | Notebook is AMD64, Fargate is ARM64: cross-build with Buildx and QEMU; compile on `$BUILDPLATFORM` |
-| Barge-in | Model-detected only; browser reports milliseconds played (planned, generated, heard per turn) |
-| Session length | Up to 15 minutes, with rotation (FH-05) before Sonic's 8-minute connection limit |
-| Access control | Access code checked on WebSocket connect; 15-minute session cap; at most 2 concurrent sessions |
-| Voice | Matthew on both front doors |
+| Decision       | Choice                                                                                                     |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| Hosting        | AWS `us-east-1`: CloudFront, ALB, Fargate (ARM64), S3, Lambda, Bedrock, Amazon Connect                     |
+| Infrastructure | CDK in TypeScript: persistent stack (no hourly charges) and app stack (only during approved windows)       |
+| Consent        | App stack deploys only through `demo-up`, gated by approval in GitHub Environment `demo`; window 1–8 hours |
+| Enforcement    | Reaper Lambda deletes the app stack at expiry, on a missing or malformed tag, or 8 hours after creation    |
+| CI             | `ci.yml` runs every pre-commit hook plus the ARM64 image build, with no AWS credentials                    |
+| Language       | English (en-US) only                                                                                       |
+| Stack          | TypeScript, from AWS's `websocket-nodejs` Nova 2 Sonic sample; model `amazon.nova-2-sonic-v1:0`            |
+| Build platform | Notebook is AMD64, Fargate is ARM64: cross-build with Buildx and QEMU; compile on `$BUILDPLATFORM`         |
+| Barge-in       | Model-detected only; browser reports milliseconds played (planned, generated, heard per turn)              |
+| Session length | Up to 15 minutes, with rotation (FH-05) before Sonic's 8-minute connection limit                           |
+| Access control | Access code checked on WebSocket connect; 15-minute session cap; at most 2 concurrent sessions             |
+| Voice          | Matthew on both front doors                                                                                |
 
 ## Out of scope: designed, not built
 
