@@ -1,0 +1,38 @@
+# Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
+# checkout v5, setup-node v5, pnpm/action-setup v4, aws-actions/configure-aws-credentials v5.
+#
+# Deploys only the persistent stack (stack ID PersistentStack). It cannot create the app stack.
+name: infra-deploy
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: infra
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.INFRA_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # expiresAt is only needed so the app stack in the same CDK app can synth; it is not deployed.
+      - run: |
+          pnpm --filter infra exec cdk deploy PersistentStack --exclusively \
+            --require-approval never \
+            -c expiresAt="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"

@@ -1,0 +1,63 @@
+# Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
+# checkout v5, setup-node v5, pnpm/action-setup v4, aws-actions/configure-aws-credentials v5.
+#
+# Removing infrastructure never needs consent: no reviewer on the `teardown` Environment.
+# The nightly run is a backup to the reaper Lambda.
+name: demo-down
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * *'
+
+permissions: {}
+
+concurrency:
+  group: demo
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  STACK_NAME: supplier-line-app
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    environment: teardown
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ vars.TEARDOWN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - id: scale
+        name: Scale Fargate to zero
+        run: |
+          if ! out=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" 2>&1); then
+            grep -q "does not exist" <<<"$out" || { echo "$out"; exit 1; }
+            echo "No app stack, nothing to tear down."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "exists=true" >> "$GITHUB_OUTPUT"
+          service_arn=$(aws cloudformation describe-stack-resources --stack-name "$STACK_NAME" \
+            --query "StackResources[?ResourceType=='AWS::ECS::Service'].PhysicalResourceId" --output text)
+          cluster=$(cut -d/ -f2 <<<"$service_arn")
+          aws ecs update-service --cluster "$cluster" --service "$service_arn" --desired-count 0 > /dev/null
+      - if: steps.scale.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+      - if: steps.scale.outputs.exists == 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - if: steps.scale.outputs.exists == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.scale.outputs.exists == 'true'
+        name: Destroy the app stack
+        run: |
+          pnpm --filter infra exec cdk destroy AppStack --force \
+            -c expiresAt="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
