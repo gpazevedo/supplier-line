@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(pnpm:*)",
+      "Bash(node:*)",
+      "Bash(git:*)",
+      "Bash(pre-commit:*)",
+      "Bash(docker buildx:*)",
+      "Bash(docker run:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker logs:*)",
+      "Bash(docker stop:*)",
+      "Bash(docker rm:*)",
+      "Bash(herdr:*)",
+      "Bash(gh run watch:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)",
+      "Bash(ffmpeg:*)",
+      "Bash(aws s3 ls:*)",
+      "Bash(aws s3 cp:*)",
+      "Bash(aws logs:*)"
+    ],
+    "deny": [
+      "Bash(git commit --no-verify:*)",
+      "Bash(git commit -n:*)",
+      "Bash(git push --no-verify:*)",
+      "Bash(cdk:*)",
+      "Bash(npx cdk:*)",
+      "Bash(pnpm cdk deploy:*)",
+      "Bash(pnpm cdk destroy:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh api:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh variable:*)",
+      "Bash(gh secret:*)",
+      "Bash(aws configure:*)",
+      "Bash(aws sso:*)",
+      "Read(~/.aws/**)",
+      "Read(~/.config/gh/**)"
+    ]
+  }
+}
