@@ -18,6 +18,7 @@
     "tsx": "^4.23.15"
   },
   "scripts": {
-    "cdk:check": "AWS_EC2_METADATA_DISABLED=true AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null cdk synth --quiet --no-notices -c expiresAt=$(date -u -d \"+1 hour\" +%Y-%m-%dT%H:%M:%SZ)"
+    "cdk:check": "AWS_EC2_METADATA_DISABLED=true AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null cdk synth --quiet --no-notices -c expiresAt=$(date -u -d \"+1 hour\" +%Y-%m-%dT%H:%M:%SZ)",
+    "reaper:selftest": "cdk deploy --app 'tsx src/reaper/selftest.ts' --output cdk.out.selftest --require-approval never --no-notices"
   }
 }

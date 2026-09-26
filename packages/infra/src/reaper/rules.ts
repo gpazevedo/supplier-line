@@ -4,6 +4,13 @@ import { requireExpiresAt } from '../expiry';
 export const EPHEMERAL_TAG = 'supplier-line:ephemeral';
 export const MAX_AGE_MS = 8 * 60 * 60 * 1000;
 
+/** Stack statuses that trigger an email, and the word the email uses. */
+export const ALERTED_STATUSES: Record<string, string> = {
+  CREATE_COMPLETE: 'created',
+  DELETE_COMPLETE: 'deleted',
+  DELETE_FAILED: 'delete failed',
+};
+
 function tag(stack: Stack, key: string): string | undefined {
   return stack.Tags?.find((t) => t.Key === key)?.Value;
 }

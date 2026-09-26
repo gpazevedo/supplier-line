@@ -1,18 +1,12 @@
 import { type CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
 import { alert } from './alert';
-import { isEphemeral } from './rules';
+import { ALERTED_STATUSES, isEphemeral } from './rules';
 
 /** The `detail` of an EventBridge `CloudFormation Stack Status Change` event. */
 export interface StackStatusDetail {
   'stack-id': string;
   'status-details': { status: string; 'status-reason'?: string };
 }
-
-export const ALERTED_STATUSES: Record<string, string> = {
-  CREATE_COMPLETE: 'created',
-  DELETE_COMPLETE: 'deleted',
-  DELETE_FAILED: 'delete failed',
-};
 
 /** Emails when an ephemeral stack is created, deleted, or fails to delete. */
 export async function alertOnStatus(cfn: CloudFormationClient, detail: StackStatusDetail) {
