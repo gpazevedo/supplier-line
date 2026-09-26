@@ -14,18 +14,14 @@ repos:
         exclude: ^(node_modules|pnpm-lock\.yaml)
         stages: [pre-commit]
 
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.15.0
+  - repo: local
     hooks:
       - id: eslint
-        files: \.tsx?$
-        exclude: ^node_modules
-        args: ['--fix']
+        name: eslint
+        entry: pnpm exec eslint --fix
+        language: system
+        types_or: [ts, tsx]
         stages: [pre-commit]
-        additional_dependencies:
-          - '@eslint/js'
-          - 'eslint-config-prettier'
-          - 'typescript-eslint'
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
