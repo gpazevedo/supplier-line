@@ -1,0 +1,52 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "NovaSonic",
+      "Effect": "Allow",
+      "Action": "bedrock:InvokeModel",
+      "Resource": "arn:aws:bedrock:us-east-1::foundation-model/amazon.nova-2-sonic-v1:0"
+    },
+    {
+      "Sid": "ConnectBrowserCall",
+      "Effect": "Allow",
+      "Action": "connect:StartWebRTCContact",
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadTraces",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::supplier-line-traces-*",
+        "arn:aws:s3:::supplier-line-traces-*/*"
+      ]
+    },
+    {
+      "Sid": "ReadLogs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams",
+        "logs:GetLogEvents",
+        "logs:FilterLogEvents",
+        "logs:StartQuery",
+        "logs:GetQueryResults"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "HardDeny",
+      "Effect": "Deny",
+      "Action": [
+        "ecs:*",
+        "elasticloadbalancing:*",
+        "cloudformation:*",
+        "iam:*",
+        "ec2:RunInstances",
+        "sts:AssumeRole"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
