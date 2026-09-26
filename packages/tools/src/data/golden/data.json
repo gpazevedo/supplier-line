@@ -1,0 +1,398 @@
+{
+  "suppliers": [
+    {
+      "id": "SUP-001",
+      "name": "Northwind Components"
+    },
+    {
+      "id": "SUP-002",
+      "name": "Harbor Steel Works"
+    },
+    {
+      "id": "SUP-003",
+      "name": "Alder & Finch Packaging"
+    },
+    {
+      "id": "SUP-004",
+      "name": "Meridian Electronics"
+    },
+    {
+      "id": "SUP-005",
+      "name": "Blue Ridge Plastics"
+    },
+    {
+      "id": "SUP-006",
+      "name": "Kestrel Industrial Supply"
+    },
+    {
+      "id": "SUP-007",
+      "name": "Copperleaf Textiles"
+    },
+    {
+      "id": "SUP-008",
+      "name": "Summit Fasteners"
+    }
+  ],
+  "purchaseOrders": [
+    {
+      "code": "PO-10482",
+      "supplierId": "SUP-008",
+      "status": "shipped",
+      "amountCents": 4521618,
+      "currency": "EUR",
+      "orderDate": "2026-10-04",
+      "deliveryDate": "2026-10-24"
+    },
+    {
+      "code": "PO-20931",
+      "supplierId": "SUP-008",
+      "status": "delayed",
+      "amountCents": 2635378,
+      "currency": "USD",
+      "orderDate": "2026-09-15",
+      "deliveryDate": "2026-09-30"
+    },
+    {
+      "code": "PO-23943",
+      "supplierId": "SUP-008",
+      "status": "delayed",
+      "amountCents": 832755,
+      "currency": "USD",
+      "orderDate": "2026-10-30",
+      "deliveryDate": "2026-11-07"
+    },
+    {
+      "code": "PO-80599",
+      "supplierId": "SUP-008",
+      "status": "delivered",
+      "amountCents": 1989317,
+      "currency": "GBP",
+      "orderDate": "2026-10-16",
+      "deliveryDate": "2026-11-26"
+    },
+    {
+      "code": "PO-72022",
+      "supplierId": "SUP-006",
+      "status": "cancelled",
+      "amountCents": 3229394,
+      "currency": "GBP",
+      "orderDate": "2026-09-17",
+      "deliveryDate": "2026-10-24"
+    },
+    {
+      "code": "PO-11087",
+      "supplierId": "SUP-008",
+      "status": "open",
+      "amountCents": 4213366,
+      "currency": "USD",
+      "orderDate": "2026-10-12",
+      "deliveryDate": "2026-11-03"
+    },
+    {
+      "code": "PO-36013",
+      "supplierId": "SUP-006",
+      "status": "shipped",
+      "amountCents": 3252102,
+      "currency": "USD",
+      "orderDate": "2026-09-02",
+      "deliveryDate": "2026-10-16"
+    },
+    {
+      "code": "PO-66711",
+      "supplierId": "SUP-008",
+      "status": "delayed",
+      "amountCents": 2979887,
+      "currency": "GBP",
+      "orderDate": "2026-09-08",
+      "deliveryDate": "2026-09-28"
+    },
+    {
+      "code": "PO-04193",
+      "supplierId": "SUP-008",
+      "status": "delivered",
+      "amountCents": 4973475,
+      "currency": "USD",
+      "orderDate": "2026-10-09",
+      "deliveryDate": "2026-11-17"
+    },
+    {
+      "code": "PO-68450",
+      "supplierId": "SUP-002",
+      "status": "cancelled",
+      "amountCents": 1988956,
+      "currency": "USD",
+      "orderDate": "2026-09-25",
+      "deliveryDate": "2026-10-25"
+    },
+    {
+      "code": "PO-47570",
+      "supplierId": "SUP-003",
+      "status": "open",
+      "amountCents": 3990198,
+      "currency": "GBP",
+      "orderDate": "2026-10-10",
+      "deliveryDate": "2026-11-07"
+    },
+    {
+      "code": "PO-56376",
+      "supplierId": "SUP-004",
+      "status": "shipped",
+      "amountCents": 298189,
+      "currency": "USD",
+      "orderDate": "2026-09-14",
+      "deliveryDate": "2026-10-14"
+    },
+    {
+      "code": "PO-41475",
+      "supplierId": "SUP-008",
+      "status": "delayed",
+      "amountCents": 1171528,
+      "currency": "EUR",
+      "orderDate": "2026-10-02",
+      "deliveryDate": "2026-11-05"
+    },
+    {
+      "code": "PO-85767",
+      "supplierId": "SUP-004",
+      "status": "delivered",
+      "amountCents": 1906156,
+      "currency": "USD",
+      "orderDate": "2026-10-02",
+      "deliveryDate": "2026-10-30"
+    },
+    {
+      "code": "PO-99155",
+      "supplierId": "SUP-003",
+      "status": "cancelled",
+      "amountCents": 2760685,
+      "currency": "USD",
+      "orderDate": "2026-09-21",
+      "deliveryDate": "2026-10-30"
+    },
+    {
+      "code": "PO-62311",
+      "supplierId": "SUP-002",
+      "status": "open",
+      "amountCents": 1482816,
+      "currency": "USD",
+      "orderDate": "2026-10-20",
+      "deliveryDate": "2026-11-13"
+    },
+    {
+      "code": "PO-27620",
+      "supplierId": "SUP-008",
+      "status": "shipped",
+      "amountCents": 4315305,
+      "currency": "USD",
+      "orderDate": "2026-09-04",
+      "deliveryDate": "2026-10-16"
+    },
+    {
+      "code": "PO-25132",
+      "supplierId": "SUP-005",
+      "status": "delayed",
+      "amountCents": 2950189,
+      "currency": "EUR",
+      "orderDate": "2026-10-11",
+      "deliveryDate": "2026-11-02"
+    },
+    {
+      "code": "PO-76570",
+      "supplierId": "SUP-001",
+      "status": "delivered",
+      "amountCents": 4008286,
+      "currency": "GBP",
+      "orderDate": "2026-10-30",
+      "deliveryDate": "2026-12-11"
+    },
+    {
+      "code": "PO-29956",
+      "supplierId": "SUP-006",
+      "status": "cancelled",
+      "amountCents": 2328604,
+      "currency": "GBP",
+      "orderDate": "2026-09-13",
+      "deliveryDate": "2026-10-02"
+    },
+    {
+      "code": "PO-08386",
+      "supplierId": "SUP-008",
+      "status": "open",
+      "amountCents": 1424003,
+      "currency": "USD",
+      "orderDate": "2026-10-16",
+      "deliveryDate": "2026-11-24"
+    },
+    {
+      "code": "PO-28225",
+      "supplierId": "SUP-001",
+      "status": "shipped",
+      "amountCents": 225225,
+      "currency": "USD",
+      "orderDate": "2026-10-09",
+      "deliveryDate": "2026-11-23"
+    },
+    {
+      "code": "PO-33436",
+      "supplierId": "SUP-001",
+      "status": "delayed",
+      "amountCents": 4463828,
+      "currency": "USD",
+      "orderDate": "2026-10-16",
+      "deliveryDate": "2026-11-17"
+    },
+    {
+      "code": "PO-26760",
+      "supplierId": "SUP-002",
+      "status": "delivered",
+      "amountCents": 2329561,
+      "currency": "EUR",
+      "orderDate": "2026-09-22",
+      "deliveryDate": "2026-10-29"
+    },
+    {
+      "code": "PO-75791",
+      "supplierId": "SUP-006",
+      "status": "cancelled",
+      "amountCents": 4498265,
+      "currency": "USD",
+      "orderDate": "2026-10-26",
+      "deliveryDate": "2026-11-29"
+    },
+    {
+      "code": "PO-17850",
+      "supplierId": "SUP-005",
+      "status": "open",
+      "amountCents": 3126451,
+      "currency": "USD",
+      "orderDate": "2026-10-27",
+      "deliveryDate": "2026-11-15"
+    },
+    {
+      "code": "PO-40009",
+      "supplierId": "SUP-002",
+      "status": "shipped",
+      "amountCents": 4425290,
+      "currency": "USD",
+      "orderDate": "2026-10-30",
+      "deliveryDate": "2026-11-16"
+    },
+    {
+      "code": "PO-32901",
+      "supplierId": "SUP-004",
+      "status": "delayed",
+      "amountCents": 4723760,
+      "currency": "USD",
+      "orderDate": "2026-10-01",
+      "deliveryDate": "2026-11-13"
+    },
+    {
+      "code": "PO-28513",
+      "supplierId": "SUP-007",
+      "status": "delivered",
+      "amountCents": 599293,
+      "currency": "USD",
+      "orderDate": "2026-09-06",
+      "deliveryDate": "2026-10-05"
+    },
+    {
+      "code": "PO-93418",
+      "supplierId": "SUP-003",
+      "status": "cancelled",
+      "amountCents": 4417538,
+      "currency": "EUR",
+      "orderDate": "2026-09-10",
+      "deliveryDate": "2026-10-13"
+    },
+    {
+      "code": "PO-77739",
+      "supplierId": "SUP-004",
+      "status": "open",
+      "amountCents": 4892040,
+      "currency": "EUR",
+      "orderDate": "2026-09-17",
+      "deliveryDate": "2026-10-18"
+    },
+    {
+      "code": "PO-39139",
+      "supplierId": "SUP-006",
+      "status": "shipped",
+      "amountCents": 4379480,
+      "currency": "EUR",
+      "orderDate": "2026-09-09",
+      "deliveryDate": "2026-09-24"
+    },
+    {
+      "code": "PO-29886",
+      "supplierId": "SUP-004",
+      "status": "delayed",
+      "amountCents": 3292298,
+      "currency": "USD",
+      "orderDate": "2026-10-15",
+      "deliveryDate": "2026-11-06"
+    },
+    {
+      "code": "PO-13829",
+      "supplierId": "SUP-006",
+      "status": "delivered",
+      "amountCents": 4187883,
+      "currency": "USD",
+      "orderDate": "2026-10-10",
+      "deliveryDate": "2026-11-08"
+    },
+    {
+      "code": "PO-46997",
+      "supplierId": "SUP-007",
+      "status": "cancelled",
+      "amountCents": 2071167,
+      "currency": "GBP",
+      "orderDate": "2026-10-26",
+      "deliveryDate": "2026-11-21"
+    },
+    {
+      "code": "PO-44719",
+      "supplierId": "SUP-005",
+      "status": "open",
+      "amountCents": 3882651,
+      "currency": "GBP",
+      "orderDate": "2026-10-23",
+      "deliveryDate": "2026-11-04"
+    },
+    {
+      "code": "PO-47444",
+      "supplierId": "SUP-004",
+      "status": "shipped",
+      "amountCents": 3857752,
+      "currency": "USD",
+      "orderDate": "2026-09-22",
+      "deliveryDate": "2026-10-18"
+    },
+    {
+      "code": "PO-28269",
+      "supplierId": "SUP-005",
+      "status": "delayed",
+      "amountCents": 4118654,
+      "currency": "USD",
+      "orderDate": "2026-10-06",
+      "deliveryDate": "2026-11-07"
+    },
+    {
+      "code": "PO-10840",
+      "supplierId": "SUP-003",
+      "status": "delivered",
+      "amountCents": 973512,
+      "currency": "EUR",
+      "orderDate": "2026-09-18",
+      "deliveryDate": "2026-09-28"
+    },
+    {
+      "code": "PO-09143",
+      "supplierId": "SUP-007",
+      "status": "cancelled",
+      "amountCents": 1622027,
+      "currency": "GBP",
+      "orderDate": "2026-09-23",
+      "deliveryDate": "2026-10-24"
+    }
+  ]
+}
