@@ -55,6 +55,7 @@ pre-commit install --hook-type pre-commit --hook-type pre-push
    ```
 
    Other agents get no GitHub token.
+
 4. Add the access code as a repo secret. Generate a random code, then set it with your own `gh` login (`gh auth login` first if needed), not the orchestrator's `GH_TOKEN`:
 
    ```bash
@@ -101,13 +102,13 @@ Also enable Bedrock model access for Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`) i
 
 Record with your headset mic and save under `fixtures/clips/` as 16 kHz, 16-bit, mono WAV:
 
-| File | Say |
-| --- | --- |
-| `po-status-a.wav` | A PO-status question |
-| `po-status-b.wav` | The same question, different PO |
-| `interrupt.wav` | "Wait, stop" |
-| `followup-delivery.wav` | "And the delivery date?" |
-| `silence-3s.wav` | 3 seconds of silence |
+| File                    | Say                             |
+| ----------------------- | ------------------------------- |
+| `po-status-a.wav`       | A PO-status question            |
+| `po-status-b.wav`       | The same question, different PO |
+| `interrupt.wav`         | "Wait, stop"                    |
+| `followup-delivery.wav` | "And the delivery date?"        |
+| `silence-3s.wav`        | 3 seconds of silence            |
 
 Convert any other format:
 
