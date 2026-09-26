@@ -1,24 +1,20 @@
 import js from '@eslint/js';
 import prettierConfig from 'eslint-config-prettier';
+import { defineConfig, globalIgnores } from 'eslint/config';
 import ts from 'typescript-eslint';
 
-export default [
-  {
-    ignores: ['node_modules', 'dist', 'build', '.next', '.turbo'],
-  },
+export default defineConfig([
+  globalIgnores(['**/dist/', '**/build/', '**/cdk.out/', '**/coverage/']),
   js.configs.recommended,
-  ...ts.configs.strict,
-  ...ts.configs.stylistic,
+  ts.configs.strict,
+  ts.configs.stylistic,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
     },
   },
   prettierConfig,
-];
+]);
