@@ -10,7 +10,9 @@ export async function loadFile(file: File): Promise<Trace> {
   try {
     return parseTraceText(await file.text());
   } catch (error) {
-    throw new Error(`${file.name}: ${error instanceof Error ? error.message : error}`);
+    throw new Error(`${file.name}: ${error instanceof Error ? error.message : error}`, {
+      cause: error,
+    });
   }
 }
 
