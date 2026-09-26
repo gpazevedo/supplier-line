@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cdk:check": "exit 0",
-    "check:traces": "exit 0"
+    "check:traces": "pnpm --filter traces exec tsx src/cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
