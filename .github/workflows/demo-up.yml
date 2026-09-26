@@ -81,9 +81,11 @@ jobs:
           SITE_URL: ${{ steps.deploy.outputs.site_url }}
           EXPIRES_AT: ${{ steps.deploy.outputs.expires_at }}
         run: |
-          echo "### Demo is up" >> "$GITHUB_STEP_SUMMARY"
-          echo "- URL: $SITE_URL" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Expires at: $EXPIRES_AT (UTC)" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Demo is up"
+            echo "- URL: $SITE_URL"
+            echo "- Expires at: $EXPIRES_AT (UTC)"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   smoke:
     needs: deploy
