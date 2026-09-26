@@ -2,5 +2,12 @@
   "name": "traces",
   "version": "0.0.0",
   "type": "module",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1141.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  }
 }

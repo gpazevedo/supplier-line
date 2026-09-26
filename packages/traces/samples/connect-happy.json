@@ -1,0 +1,19 @@
+{
+  "session_id": "sample-connect-happy",
+  "front_door": "connect",
+  "started_at": "2026-09-26T10:30:00.000Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": { "voice_to_voice_ms": 1100 },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order 4 8 2 1 7 is shipped and due on March third."
+      },
+      "assistant": {
+        "final_text": "Purchase order 4 8 2 1 7 is shipped and due on March third."
+      }
+    }
+  ],
+  "events": []
+}
