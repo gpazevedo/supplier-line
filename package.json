@@ -2,26 +2,24 @@
   "name": "supplier-line",
   "version": "0.0.0",
   "description": "English-only voice agent that answers purchase-order status",
-  "packageManager": "pnpm@9.8.0",
+  "packageManager": "pnpm@12.6.0",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "cdk:check": "exit 0",
-    "check:traces": "exit 0"
+    "cdk:check": "pnpm --filter infra cdk:check",
+    "check:traces": "pnpm --filter traces exec tsx src/cli.ts",
+    "reaper:selftest": "pnpm --filter infra reaper:selftest"
   },
   "devDependencies": {
-    "@eslint/js": "^9.15.0",
-    "@types/node": "^22.9.0",
-    "eslint": "^9.15.0",
-    "eslint-config-prettier": "^9.1.0",
-    "prettier": "^3.3.3",
-    "typescript": "^5.7.2",
-    "typescript-eslint": "^8.7.0",
-    "vitest": "^2.1.8"
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.13.6",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vitest": "^5.0.2"
   }
 }

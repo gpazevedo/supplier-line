@@ -1,0 +1,16 @@
+[
+  { "iso": "2026-10-03", "spoken": "October third, twenty twenty-six" },
+  { "iso": "2026-01-01", "spoken": "January first, twenty twenty-six" },
+  { "iso": "2026-02-02", "spoken": "February second, twenty twenty-six" },
+  { "iso": "2026-03-11", "spoken": "March eleventh, twenty twenty-six" },
+  { "iso": "2026-04-20", "spoken": "April twentieth, twenty twenty-six" },
+  { "iso": "2026-05-21", "spoken": "May twenty-first, twenty twenty-six" },
+  { "iso": "2026-06-30", "spoken": "June thirtieth, twenty twenty-six" },
+  { "iso": "2026-12-31", "spoken": "December thirty-first, twenty twenty-six" },
+  { "iso": "2024-02-29", "spoken": "February twenty-ninth, twenty twenty-four" },
+  { "iso": "2000-07-04", "spoken": "July fourth, two thousand" },
+  { "iso": "2005-08-12", "spoken": "August twelfth, two thousand five" },
+  { "iso": "2010-09-13", "spoken": "September thirteenth, twenty ten" },
+  { "iso": "2100-11-22", "spoken": "November twenty-second, twenty-one hundred" },
+  { "iso": "1999-12-25", "spoken": "December twenty-fifth, nineteen ninety-nine" }
+]
