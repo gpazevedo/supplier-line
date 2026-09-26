@@ -2,5 +2,17 @@
   "name": "infra",
   "version": "0.0.0",
   "type": "module",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "aws-cdk-lib": "^2.271.0",
+    "cdk-nag": "^3.0.2",
+    "constructs": "^10.8.1"
+  },
+  "devDependencies": {
+    "aws-cdk": "^2.1143.0",
+    "tsx": "^4.23.15"
+  },
+  "scripts": {
+    "cdk:check": "AWS_EC2_METADATA_DISABLED=true AWS_CONFIG_FILE=/dev/null AWS_SHARED_CREDENTIALS_FILE=/dev/null cdk synth --quiet --no-notices -c expiresAt=$(date -u -d \"+1 hour\" +%Y-%m-%dT%H:%M:%SZ)"
+  }
 }
