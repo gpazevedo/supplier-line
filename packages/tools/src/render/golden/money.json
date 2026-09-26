@@ -1,0 +1,30 @@
+[
+  {
+    "cents": 123456,
+    "currency": "USD",
+    "spoken": "one thousand two hundred thirty-four dollars and fifty-six cents"
+  },
+  { "cents": 0, "currency": "USD", "spoken": "zero dollars" },
+  { "cents": 1, "currency": "USD", "spoken": "one cent" },
+  { "cents": 100, "currency": "USD", "spoken": "one dollar" },
+  { "cents": 101, "currency": "USD", "spoken": "one dollar and one cent" },
+  { "cents": 2100, "currency": "USD", "spoken": "twenty-one dollars" },
+  { "cents": 99, "currency": "USD", "spoken": "ninety-nine cents" },
+  { "cents": 100000, "currency": "USD", "spoken": "one thousand dollars" },
+  { "cents": 100005, "currency": "USD", "spoken": "one thousand dollars and five cents" },
+  {
+    "cents": 123456789,
+    "currency": "USD",
+    "spoken": "one million two hundred thirty-four thousand five hundred sixty-seven dollars and eighty-nine cents"
+  },
+  {
+    "cents": 250000000000,
+    "currency": "USD",
+    "spoken": "two billion five hundred million dollars"
+  },
+  { "cents": 5050, "currency": "EUR", "spoken": "fifty euros and fifty cents" },
+  { "cents": 101, "currency": "GBP", "spoken": "one pound and one penny" },
+  { "cents": 1250, "currency": "GBP", "spoken": "twelve pounds and fifty pence" },
+  { "cents": 1999, "currency": "BRL", "spoken": "nineteen reais and ninety-nine centavos" },
+  { "cents": 1500, "currency": "JPY", "spoken": "one thousand five hundred yen" }
+]
