@@ -1,0 +1,24 @@
+{
+  "session_id": "sample-softphone-bargein",
+  "front_door": "softphone",
+  "started_at": "2026-09-26T10:05:00.000Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": { "voice_to_voice_ms": 910 },
+      "audio": {
+        "planned_ms": 6000,
+        "delivered_ms": 3100,
+        "played_ms": 2800,
+        "flush_latency_ms": 140
+      },
+      "bargein": { "at_ms": 2500 },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order 4 8 2 1 7 is shipped and due on March third."
+      },
+      "assistant": { "final_text": "Purchase order 4 8 2 1 7 is shipped and" }
+    }
+  ],
+  "events": []
+}
