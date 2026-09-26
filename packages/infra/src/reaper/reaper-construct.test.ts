@@ -80,7 +80,15 @@ function arnIn(service: string, resource: string) {
   return {
     'Fn::Join': [
       '',
-      ['arn:', { Ref: 'AWS::Partition' }, `:${service}:us-east-1:111122223333:${resource}`],
+      [
+        'arn:',
+        { Ref: 'AWS::Partition' },
+        `:${service}:`,
+        { Ref: 'AWS::Region' },
+        ':',
+        { Ref: 'AWS::AccountId' },
+        `:${resource}`,
+      ],
     ],
   };
 }

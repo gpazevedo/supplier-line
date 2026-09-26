@@ -1,9 +1,21 @@
 # infra
 
-CDK app stack (S09): VPC (public subnets only, no NAT), Fargate ARM64 host, ALB reachable only from CloudFront, CloudFront with an S3 site and `/ws` and `/api/*` routes. S10's persistent stack joins it in `src/app.ts`.
+CDK app stack (S09): VPC (public subnets only, no NAT), Fargate ARM64 host, ALB reachable only from CloudFront, CloudFront with an S3 site and `/ws` and `/api/*` routes. The persistent stack (S10) sits beside it in `src/app.ts`.
 
-- `pnpm cdk:check`: `cdk synth` plus cdk-nag (AwsSolutions), with no AWS credentials.
-- Context: `expiresAt` (required, ISO 8601 UTC, e.g. `2026-09-26T18:30:00Z`; synth throws without it) and `imageTag` (host image in ECR repo `supplier-line-host`, default `latest`).
+- `pnpm cdk:check`: `cdk synth` of both stacks plus cdk-nag (AwsSolutions), with no AWS credentials and a dummy `alertEmail`.
+- Context: `expiresAt` (required, ISO 8601 UTC, e.g. `2026-09-26T18:30:00Z`; synth throws without it), `imageTag` (host image in ECR repo `supplier-line-host`, default `latest`) and `alertEmail` (required for `PersistentStack` only; never committed).
+
+## Persistent stack (S10)
+
+`PersistentStack` (`supplier-line-persistent`, `src/persistent/`), no hourly charges, termination-protected:
+
+- ECR repo `supplier-line-host`; traces bucket `supplier-line-traces-<account-id>` (S3-encrypted, private, TLS only); SSM `/supplier-line/demo-access-code` holding a placeholder.
+- PO status Lambda bundled from `packages/tools/src/po-status/lambda.ts`; Lex V2 bot (en_US, `PoStatus` intent, `PoDigits` slot of five digits) fulfilled by it through the `live` alias; Connect instance with the bot associated and a flow whose error branch plays an error message.
+- GitHub OIDC provider and three roles, each trusted only for its Environment's `sub`. `demo`: push to ECR, CDK deploy and file-publishing roles. `infra`: the same two CDK roles. `teardown`: no CDK roles; describe and delete `supplier-line-app`, pass the CDK execution role to CloudFormation, scale ephemeral ECS services.
+- The reaper, and a monthly budget emailing at $10 and $30.
+
+Owner deploy steps: `docs/h0-part2.md`.
+
 - The CloudFront prefix list is looked up at deploy time by a custom resource; AZs come from `Fn::GetAZs`. Synth does no context lookups.
 
 ## Reaper (S21)

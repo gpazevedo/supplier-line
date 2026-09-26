@@ -32,7 +32,11 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # expiresAt is only needed so the app stack in the same CDK app can synth; it is not deployed.
-      - run: |
+      # alertEmail comes from a repo variable, never from the repo itself.
+      - env:
+          ALERT_EMAIL: ${{ vars.ALERT_EMAIL }}
+        run: |
           pnpm --filter infra exec cdk deploy PersistentStack --exclusively \
             --require-approval never \
+            -c alertEmail="$ALERT_EMAIL" \
             -c expiresAt="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"

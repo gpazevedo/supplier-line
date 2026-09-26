@@ -1,4 +1,4 @@
-import { Arn, Duration, RemovalPolicy, Stack, Validations } from 'aws-cdk-lib';
+import { Arn, Aws, Duration, RemovalPolicy, Stack, Validations } from 'aws-cdk-lib';
 import { type IVpc, Port, SecurityGroup, SubnetType } from 'aws-cdk-lib/aws-ec2';
 import { Repository } from 'aws-cdk-lib/aws-ecr';
 import {
@@ -59,7 +59,7 @@ function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDe
   task.addToTaskRolePolicy(
     new PolicyStatement({
       actions: ['s3:PutObject'],
-      resources: [`arn:${stack.partition}:s3:::supplier-line-traces-${stack.account}/*`],
+      resources: [`arn:${Aws.PARTITION}:s3:::supplier-line-traces-${Aws.ACCOUNT_ID}/*`],
     })
   );
   Validations.of(task.obtainExecutionRole()).acknowledge({

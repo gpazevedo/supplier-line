@@ -1,5 +1,5 @@
 # Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
-# checkout v5, setup-node v5, pnpm/action-setup v4, aws-actions/configure-aws-credentials v5.
+# checkout v5, aws-actions/configure-aws-credentials v5.
 #
 # Removing infrastructure never needs consent: no reviewer on the `teardown` Environment.
 # The nightly run is a backup to the reaper Lambda.
@@ -47,17 +47,10 @@ jobs:
             --query "StackResources[?ResourceType=='AWS::ECS::Service'].PhysicalResourceId" --output text)
           cluster=$(cut -d/ -f2 <<<"$service_arn")
           aws ecs update-service --cluster "$cluster" --service "$service_arn" --desired-count 0 > /dev/null
+      # Deleted directly, not with `cdk destroy`: the teardown role has no CDK bootstrap roles,
+      # so this unapproved Environment can never create or update a stack.
       - if: steps.scale.outputs.exists == 'true'
-        uses: pnpm/action-setup@v4
-      - if: steps.scale.outputs.exists == 'true'
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - if: steps.scale.outputs.exists == 'true'
-        run: pnpm install --frozen-lockfile
-      - if: steps.scale.outputs.exists == 'true'
-        name: Destroy the app stack
+        name: Delete the app stack
         run: |
-          pnpm --filter infra exec cdk destroy AppStack --force \
-            -c expiresAt="$(date -u -d '+1 hour' +%Y-%m-%dT%H:%M:%SZ)"
+          aws cloudformation delete-stack --stack-name "$STACK_NAME"
+          aws cloudformation wait stack-delete-complete --stack-name "$STACK_NAME"

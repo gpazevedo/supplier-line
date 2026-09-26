@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { Duration, Stack, Validations } from 'aws-cdk-lib';
+import { Aws, Duration, Validations } from 'aws-cdk-lib';
 import { ComparisonOperator, TreatMissingData } from 'aws-cdk-lib/aws-cloudwatch';
 import { SnsAction } from 'aws-cdk-lib/aws-cloudwatch-actions';
 import { Rule, Schedule } from 'aws-cdk-lib/aws-events';
@@ -63,7 +63,6 @@ export class ReaperConstruct extends Construct {
 
   /** Listing needs `*`; deleting stacks and scaling services is limited to resources tagged ephemeral. */
   private grantReaping() {
-    const stack = Stack.of(this);
     const ephemeralOnly = { StringEquals: { [`aws:ResourceTag/${EPHEMERAL_TAG}`]: 'true' } };
     this.role.addToPolicy(
       new PolicyStatement({ actions: ['cloudformation:DescribeStacks'], resources: ['*'] })
@@ -71,16 +70,14 @@ export class ReaperConstruct extends Construct {
     this.role.addToPolicy(
       new PolicyStatement({
         actions: ['cloudformation:DeleteStack', 'cloudformation:ListStackResources'],
-        resources: [
-          stack.formatArn({ service: 'cloudformation', resource: 'stack', resourceName: '*' }),
-        ],
+        resources: [`arn:${Aws.PARTITION}:cloudformation:${Aws.REGION}:${Aws.ACCOUNT_ID}:stack/*`],
         conditions: ephemeralOnly,
       })
     );
     this.role.addToPolicy(
       new PolicyStatement({
         actions: ['ecs:UpdateService'],
-        resources: [stack.formatArn({ service: 'ecs', resource: 'service', resourceName: '*' })],
+        resources: [`arn:${Aws.PARTITION}:ecs:${Aws.REGION}:${Aws.ACCOUNT_ID}:service/*`],
         conditions: ephemeralOnly,
       })
     );
