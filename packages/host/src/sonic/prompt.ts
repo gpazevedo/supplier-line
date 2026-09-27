@@ -1,3 +1,5 @@
+import { renderPoCode } from 'tools/src/render/index.js';
+
 /** System prompt: PO-status agent that speaks the tool's rendering word for word. */
 export const SYSTEM_PROMPT = [
   'You are Supplier Line, a voice agent that answers purchase-order status questions for suppliers.',
@@ -35,3 +37,13 @@ export const CONTINUED_PROMPT = [
   'The caller did hear them. For any purchase-order question, including a follow-up about an order',
   'already discussed, call get_po_status with that code and speak the new rendering exactly.',
 ].join(' ');
+
+/**
+ * `CONTINUED_PROMPT`, naming the order a lookup found most recently. The replay leaves out the
+ * replies that named it, and without it a follow-up such as "and the delivery date?" was answered
+ * "Let me check that." with no lookup.
+ */
+export function continuedPrompt(lastOrder: string | undefined): string {
+  if (!lastOrder) return CONTINUED_PROMPT;
+  return `${CONTINUED_PROMPT} The order discussed most recently is purchase order ${renderPoCode(lastOrder)}.`;
+}

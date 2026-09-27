@@ -7,7 +7,7 @@ import {
   toolResultEvents,
   type SonicInputEvent,
 } from './events.js';
-import { CONTINUED_PROMPT, SYSTEM_PROMPT } from './prompt.js';
+import { CONTINUED_PROMPT, continuedPrompt, SYSTEM_PROMPT } from './prompt.js';
 
 const ids = { prompt: 'p1', system: 's1', audio: 'a1' };
 const nameOf = (e: SonicInputEvent) => Object.keys(e.event)[0];
@@ -105,6 +105,13 @@ it('setupEvents sends the given system prompt', () => {
 it('a continued connection is told PO answers were left out and must be looked up again', () => {
   expect(CONTINUED_PROMPT.startsWith(SYSTEM_PROMPT)).toBe(true);
   expect(CONTINUED_PROMPT.slice(SYSTEM_PROMPT.length)).toMatch(/left out.*get_po_status/s);
+});
+
+it('names the order found last in a continued connection, so follow-ups keep it', () => {
+  expect(continuedPrompt('PO-10482')).toBe(
+    `${CONTINUED_PROMPT} The order discussed most recently is purchase order one zero four eight two.`
+  );
+  expect(continuedPrompt(undefined)).toBe(CONTINUED_PROMPT);
 });
 
 it('resumeEvents replays history as non-interactive TEXT blocks before the audio container', () => {

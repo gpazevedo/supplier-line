@@ -5,7 +5,7 @@ import { NodeHttp2Handler } from '@smithy/node-http-handler';
 import type { Trace } from 'traces/src/index.js';
 import { SonicConnection } from './connection.js';
 import { Rotator, type RotationStats, type RotatorOptions } from './rotator.js';
-import { CONTINUED_PROMPT, SYSTEM_PROMPT } from './prompt.js';
+import { continuedPrompt, SYSTEM_PROMPT } from './prompt.js';
 import { callerStillReading } from './reading.js';
 import { isInterruption, TurnRecorder } from './turns.js';
 
@@ -52,6 +52,8 @@ export class SonicSession {
   private readonly finished = Promise.withResolvers<undefined>();
   private readonly rotator: Rotator<SonicConnection>;
   private ending = false;
+  /** Code of the PO a lookup found most recently. */
+  private lastOrder?: string;
 
   constructor(
     private readonly client: BedrockRuntimeClient,
@@ -63,7 +65,7 @@ export class SonicSession {
     this.rotator = new Rotator(
       first,
       {
-        open: () => this.connect(CONTINUED_PROMPT),
+        open: () => this.connect(continuedPrompt(this.lastOrder)),
         history: () => this.recorder.history(),
         rotated: (stats) => this.onRotated(stats),
       },
@@ -111,8 +113,9 @@ export class SonicSession {
       this.client,
       {
         onEvent: (from, name, body) => this.onEvent(from, name, body),
-        onToolResult: (from, name, rendering) => {
+        onToolResult: (from, name, rendering, found) => {
           if (from !== this.rotator.current) return;
+          this.lastOrder = found ?? this.lastOrder;
           this.recorder.onToolResult(name, rendering);
           this.rotator.onToolResult(from, rendering);
         },

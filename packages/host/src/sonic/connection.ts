@@ -26,7 +26,8 @@ type Body = Record<string, unknown>;
 /** Where a connection reports its output. */
 export interface ConnectionHandlers {
   onEvent(from: SonicConnection, name: string, body: Body): void;
-  onToolResult(from: SonicConnection, name: string, rendering: string): void;
+  /** `found` is the code of the PO the lookup found, if any. */
+  onToolResult(from: SonicConnection, name: string, rendering: string, found?: string): void;
   /** True to hold a lookup because the caller is still reading the code; the model is told so. */
   callerStillReading(from: SonicConnection): Promise<boolean>;
 }
@@ -100,8 +101,8 @@ export class SonicConnection implements RotatingConnection {
     const reading = await this.handlers.callerStillReading(this);
     const result = reading ? STILL_READING_RESULT : await toolUseToResult(String(body.content));
     if (!reading) {
-      const { rendering } = JSON.parse(result) as { rendering: string };
-      this.handlers.onToolResult(this, name, rendering);
+      const { rendering, po } = JSON.parse(result) as { rendering: string; po?: { code: string } };
+      this.handlers.onToolResult(this, name, rendering, po?.code);
     }
     const events = toolResultEvents(this.ids.prompt, randomUUID(), String(body.toolUseId), result);
     events.forEach((e) => this.input.push(e));
