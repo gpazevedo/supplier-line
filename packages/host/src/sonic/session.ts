@@ -23,8 +23,8 @@ export function createSonicClient(): BedrockRuntimeClient {
 export interface SessionListener {
   /** Agent audio: 24 kHz 16-bit mono PCM, for the turn in progress (none before the caller speaks). */
   onAudio(pcm: Buffer, turn: number | undefined): void;
-  /** Sonic detected the caller barging in: queued agent audio should be dropped. */
-  onInterrupted(): void;
+  /** Sonic detected the caller barging in on `turn`: queued agent audio should be dropped. */
+  onInterrupted(turn: number | undefined): void;
   /** A FINAL transcript line, from the caller or the agent. */
   onTranscript(role: 'USER' | 'ASSISTANT', text: string): void;
 }
@@ -147,7 +147,8 @@ export class SonicSession {
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
     if (name === 'audioOutput') this.onAudio(String(body.content));
-    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') this.listener.onInterrupted();
+    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
+      this.listener.onInterrupted(this.recorder.currentTurn);
     this.rotator.onOutput(from, name, body);
   }
 

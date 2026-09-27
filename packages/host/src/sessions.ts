@@ -7,12 +7,13 @@ import { SonicSession } from './sonic/session.js';
 
 /**
  * Messages the host sends as JSON text frames; agent audio goes out as binary frames. A `turn`
- * marker precedes the first audio of each turn; `flush` means drop all queued agent audio.
+ * marker precedes the first audio of each turn; `flush` means drop all queued agent audio, and
+ * names the interrupted turn, which may not have sent any audio yet.
  */
 export type HostMessage =
   | { type: 'transcript'; role: 'USER' | 'ASSISTANT'; text: string }
   | { type: 'turn'; index: number }
-  | { type: 'flush' }
+  | { type: 'flush'; turn?: number }
   | { type: 'trace'; path: string };
 
 /**
@@ -51,7 +52,7 @@ async function serve(socket: WebSocket, { client, writer, rotation }: SessionDep
         audioTurn = turn;
         socket.send(pcm);
       },
-      onInterrupted: () => send({ type: 'flush' }),
+      onInterrupted: (turn) => send({ type: 'flush', turn }),
       onTranscript: (role, text) => send({ type: 'transcript', role, text }),
     },
     rotation

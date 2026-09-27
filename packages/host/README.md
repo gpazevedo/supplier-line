@@ -18,7 +18,7 @@ The replay streams the clip in real time, plays the agent audio on a wall clock,
 
 Each turn's trace records `audio.planned_ms`, `audio.delivered_ms` (audio Sonic generated) and `audio.played_ms` (audio the client reports it played). Over `/ws`:
 
-- Host to client: a `{"type":"turn","index":n}` frame before each turn's first audio, and `{"type":"flush"}` when Sonic signals `INTERRUPTED`.
+- Host to client: a `{"type":"turn","index":n}` frame before each turn's first audio, and `{"type":"flush","turn":n}` when Sonic signals `INTERRUPTED` (the interrupted turn may not have sent audio yet).
 - Client to host: `{"type":"played","turn":n,"ms":m}` about every 50 ms while playing, and `{"type":"flushed","turn":n,"ms":m}` once it has dropped its queue.
 
 On a barge-in, `bargein.at_ms` is the heard position when Sonic signalled and `audio.flush_latency_ms` is the time until the client confirmed the flush. Planned equals generated unless the turn was interrupted; then it is at least the speculative text's length at 55 ms per character. Sonic generates faster than real time, so heard, not generated, is where a barge-in cuts the answer.

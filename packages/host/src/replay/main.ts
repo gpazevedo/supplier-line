@@ -66,7 +66,7 @@ socket.on('message', (data, isBinary) => {
   const message = JSON.parse(String(data)) as HostMessage;
   if (message.type === 'trace') tracePath = message.path;
   if (message.type === 'turn') player.startTurn(message.index);
-  if (message.type === 'flush') log(`FLUSH     heard ${player.flush()} ms of the turn`);
+  if (message.type === 'flush') log(`FLUSH     heard ${player.flush(message.turn)} ms of the turn`);
   if (message.type !== 'transcript') return;
   if (message.role === 'ASSISTANT') spoken.push(message.text.trim());
   log(`${message.role.padEnd(9)} ${message.text.trim()}`);
