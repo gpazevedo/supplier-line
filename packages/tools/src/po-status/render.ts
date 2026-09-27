@@ -52,7 +52,7 @@ export function renderFailure(failure: Failure): string {
     case 'invalid_code':
       return `Sorry, I didn't catch a purchase order code. ${SAY_AGAIN}`;
     case 'check_digit_failed':
-      return `Sorry, ${renderPoCode(failure.code)} doesn't look like a valid purchase order code. ${SAY_AGAIN}`;
+      return `Sorry, purchase order ${renderPoCode(failure.code)} doesn't look like a valid purchase order code. ${SAY_AGAIN}`;
     case 'not_found':
       return (
         `Sorry, I couldn't find purchase order ${renderPoCode(failure.code)}. ` +

@@ -1,9 +1,10 @@
 import { cardinal } from './numbers';
 
-/** Spoken PO code, one character at a time: "PO-104" -> "P O dash one zero four". */
+const CODE = /^PO-(\d+)$/;
+
+/** Spoken PO code, digit by digit, without the "PO-" prefix: "PO-10482" -> "one zero four eight two". */
 export function renderPoCode(code: string): string {
-  if (!/^[A-Za-z0-9-]+$/.test(code)) throw new RangeError(`Invalid PO code: "${code}"`);
-  return [...code]
-    .map((c) => (c === '-' ? 'dash' : /\d/.test(c) ? cardinal(Number(c)) : c.toUpperCase()))
-    .join(' ');
+  const match = CODE.exec(code);
+  if (!match) throw new RangeError(`Invalid PO code: "${code}"`);
+  return [...match[1]].map((d) => cardinal(Number(d))).join(' ');
 }

@@ -69,7 +69,7 @@ describe('Lex V2 fulfillment Lambda', () => {
     expectClosed(
       result,
       'Fulfilled',
-      'Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. ' +
+      'Purchase order one zero four eight two from Summit Fasteners has shipped. ' +
         'The amount is forty-five thousand two hundred sixteen euros and eighteen cents. ' +
         'It was ordered on October fourth, twenty twenty-six, ' +
         'and delivery is due on October twenty-fourth, twenty twenty-six.'
@@ -78,7 +78,7 @@ describe('Lex V2 fulfillment Lambda', () => {
 
   it('accepts digits as transcribed', async () => {
     const result = await lexFulfillment(lexEvent('20931'));
-    expect(messageText(result)).toMatch(/^Purchase order P O dash two zero nine three one /);
+    expect(messageText(result)).toMatch(/^Purchase order two zero nine three one /);
   });
 
   it('fails the intent with the apology for an unknown code', async () => {
@@ -86,7 +86,7 @@ describe('Lex V2 fulfillment Lambda', () => {
     expectClosed(
       result,
       'Failed',
-      "Sorry, I couldn't find purchase order P O dash zero zero zero zero three. " +
+      "Sorry, I couldn't find purchase order zero zero zero zero three. " +
         'Could you check the number and say it again?'
     );
   });
