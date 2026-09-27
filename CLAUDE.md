@@ -49,6 +49,7 @@ The two PO codes spoken in the clips are listed in `fixtures/clips/README.md` an
 | Session length | Up to 15 minutes, with rotation (FH-05) before Sonic's 8-minute connection limit                           |
 | Access control | Access code checked on WebSocket connect; 15-minute session cap; at most 2 concurrent sessions             |
 | Voice          | Matthew on both front doors                                                                                |
+| Accessibility  | WCAG 2.2 AA for every web page, checked with axe in hooks and CI                                           |
 
 ## Out of scope: designed, not built
 

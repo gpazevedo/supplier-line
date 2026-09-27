@@ -4,6 +4,8 @@
   --fg: #1b1f24;
   --muted: #57606a;
   --border: #c9d1d9;
+  /* One fixed value in both schemes: keeps planned/generated/heard at >=3:1 (WCAG 1.4.11). */
+  --track: #161b22;
   --planned: #56b4e9;
   --generated: #0072b2;
   --heard: #e69f00;
@@ -83,7 +85,7 @@ main {
 .bar-track {
   position: relative;
   height: 1rem;
-  background: var(--border);
+  background: var(--track);
   border-radius: 3px;
 }
 
@@ -137,4 +139,26 @@ main {
 
 .said {
   font-style: italic;
+}
+
+/* --fg carries >=16:1 contrast against --bg in both schemes, so it also clears 3:1 for focus. */
+:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: 2px;
+}
+
+/* Target Size Minimum (2.5.8): at least 24x24 CSS px, regardless of the browser's own defaults. */
+button,
+select,
+input[type='file'] {
+  min-height: 24px;
+  padding: 0.5rem 0.75rem;
+}
+
+.status {
+  font-weight: 600;
+}
+
+.transcript {
+  padding-left: 1.5rem;
 }
