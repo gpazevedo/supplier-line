@@ -46,7 +46,7 @@ function exactRendering(turn: Turn): Failure[] {
 }
 
 const PO_DATA = [
-  /\bP O dash [a-z -]+ from\b/i,
+  /\bpurchase order (P O dash )?[a-z -]+ from [A-Z]/i,
   /\b(has shipped|is delayed|was delivered|was cancelled)\b/i,
   /\b(euros|dollars|pounds)\b/i,
   /\b(January|February|March|April|May|June|July|August|September|October|November|December) [a-z-]+(st|nd|rd|th)\b/,
