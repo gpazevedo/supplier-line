@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Supplier Line architecture</title>
+  <desc id="d">Browser pages reach CloudFront, which serves the site from S3 and forwards WebSocket and API traffic to an ALB and a Fargate session host that streams to Amazon Nova 2 Sonic on Bedrock. A persistent stack holds ECR, the traces bucket, the access code, Connect with a Lex bot and PO Lambda, the reaper, alerts and GitHub OIDC roles used by GitHub Actions. Dashed items are planned.</desc>
+  <style>
+    svg { --bg:#ffffff; --ink:#1f2328; --muted:#59636e; --line:#8c959f; --frame:#d0d7de;
+          --web:#ddf4ff; --web-s:#0969da; --aws:#fff1e5; --aws-s:#bc4c00; --ai:#efe9ff; --ai-s:#6639ba;
+          --ci:#dafbe1; --ci-s:#1a7f37; --gd:#ffebe9; --gd-s:#cf222e; --note:#f6f8fa; }
+    @media (prefers-color-scheme: dark) {
+      svg { --bg:#0d1117; --ink:#e6edf3; --muted:#9198a1; --line:#6e7681; --frame:#3d444d;
+            --web:#0c2d4a; --web-s:#58a6ff; --aws:#3a220f; --aws-s:#ffa657; --ai:#2b2350; --ai-s:#b39dff;
+            --ci:#12301e; --ci-s:#56d364; --gd:#3c1618; --gd-s:#ff7b72; --note:#161b22; }
+    }
+    .bg { fill: var(--bg); }
+    text { fill: var(--ink); font-size: 13px; }
+    .h1 { font-size: 22px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 700; }
+    .t { font-size: 14px; font-weight: 700; }
+    .m { fill: var(--muted); font-size: 12px; }
+    .frame { fill: none; stroke: var(--frame); stroke-width: 1.5; }
+    .eph { fill: none; stroke: var(--aws-s); stroke-width: 1.5; stroke-dasharray: 8 5; }
+    .web { fill: var(--web); stroke: var(--web-s); stroke-width: 1.5; }
+    .aws { fill: var(--aws); stroke: var(--aws-s); stroke-width: 1.5; }
+    .ai { fill: var(--ai); stroke: var(--ai-s); stroke-width: 1.5; }
+    .ci { fill: var(--ci); stroke: var(--ci-s); stroke-width: 1.5; }
+    .note { fill: var(--note); stroke: var(--frame); stroke-width: 1.2; }
+    .plan { stroke-dasharray: 5 4; fill: var(--bg); }
+    .arrow { fill: none; stroke: var(--line); stroke-width: 1.8; marker-end: url(#a); }
+    .darrow { fill: none; stroke: var(--line); stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#a); }
+    .kill { fill: none; stroke: var(--gd-s); stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#ar); }
+    .ah { fill: var(--line); }
+    .ahr { fill: var(--gd-s); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahr" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="850"/>
+
+  <text class="h1" x="40" y="44">Supplier Line architecture (AWS us-east-1)</text>
+  <g transform="translate(870 30)">
+    <path class="arrow" d="M0 8 H40"/><text class="m" x="48" y="12">built</text>
+    <path class="darrow" d="M110 8 H150"/><text class="m" x="158" y="12">planned (S17, S18)</text>
+  </g>
+
+  <!-- Browser -->
+  <rect class="frame" x="40" y="80" width="220" height="330" rx="12"/>
+  <text class="h2" x="56" y="104">Caller's browser</text>
+  <rect class="web" x="56" y="118" width="188" height="72" rx="8"/>
+  <text class="t" x="70" y="142">Softphone</text>
+  <text x="70" y="162">mic 16 kHz up,</text>
+  <text x="70" y="178">agent audio 24 kHz down</text>
+  <rect class="web" x="56" y="204" width="188" height="72" rx="8"/>
+  <text class="t" x="70" y="228">Trace viewer</text>
+  <text x="70" y="248">planned, generated,</text>
+  <text x="70" y="264">heard per turn</text>
+  <rect class="web plan" x="56" y="290" width="188" height="100" rx="8"/>
+  <text class="t" x="70" y="314">Connect calling page</text>
+  <text x="70" y="334">Amazon Chime SDK,</text>
+  <text x="70" y="350">joins a WebRTC contact</text>
+  <text x="70" y="370">WCAG 2.2 AA (all pages)</text>
+
+  <!-- App stack -->
+  <rect class="eph" x="300" y="80" width="520" height="330" rx="12"/>
+  <text class="h2" x="316" y="104">App stack: exists only during an approved window</text>
+  <text class="m" x="316" y="122">tagged ExpiresAt and supplier-line:ephemeral=true</text>
+
+  <rect class="aws" x="330" y="140" width="200" height="70" rx="8"/>
+  <text class="t" x="344" y="164">CloudFront</text>
+  <text x="344" y="184">HTTPS on cloudfront.net</text>
+  <rect class="aws" x="330" y="310" width="200" height="70" rx="8"/>
+  <text class="t" x="344" y="334">S3 site bucket</text>
+  <text x="344" y="354">softphone, viewer</text>
+
+  <rect class="aws" x="590" y="140" width="200" height="70" rx="8"/>
+  <text class="t" x="604" y="164">ALB</text>
+  <text x="604" y="184">CloudFront only, 300 s idle</text>
+  <rect class="ai" x="590" y="260" width="200" height="120" rx="8"/>
+  <text class="t" x="604" y="284">Session host</text>
+  <text x="604" y="304">Fargate ARM64,</text>
+  <text x="604" y="320">0.5 vCPU, 1 GB</text>
+  <text x="604" y="340">/ws  /api  /health</text>
+  <text x="604" y="360">rotation, ledger, traces</text>
+
+  <!-- Bedrock and notebook note -->
+  <rect class="ai" x="880" y="140" width="280" height="90" rx="8"/>
+  <text class="t" x="896" y="164">Amazon Bedrock</text>
+  <text x="896" y="184">Nova 2 Sonic, voice Matthew</text>
+  <text x="896" y="202">amazon.nova-2-sonic-v1:0</text>
+  <text x="896" y="220">bidirectional stream, en-US</text>
+
+  <rect class="note" x="880" y="260" width="280" height="120" rx="8"/>
+  <text class="t" x="896" y="284">Before H3</text>
+  <text x="896" y="306">The host and softphone run on the</text>
+  <text x="896" y="324">notebook against real Bedrock and</text>
+  <text x="896" y="342">Connect; no ALB or Fargate. The</text>
+  <text x="896" y="360">app stack exists only for demo-up.</text>
+
+  <!-- Persistent stack -->
+  <rect class="frame" x="300" y="470" width="860" height="290" rx="12"/>
+  <text class="h2" x="316" y="494">Persistent stack: no hourly charges</text>
+
+  <rect class="aws" x="325" y="510" width="190" height="90" rx="8"/>
+  <text class="t" x="339" y="534">ECR</text>
+  <text x="339" y="554">ARM64 host images</text>
+  <rect class="aws" x="535" y="510" width="190" height="90" rx="8"/>
+  <text class="t" x="549" y="534">Traces bucket</text>
+  <text x="549" y="554">supplier-line-traces-</text>
+  <text x="549" y="570">&lt;account-id&gt;</text>
+  <rect class="aws" x="745" y="510" width="190" height="90" rx="8"/>
+  <text class="t" x="759" y="534">SSM parameter</text>
+  <text x="759" y="554">demo access code,</text>
+  <text x="759" y="570">set by hand</text>
+  <rect class="aws" x="955" y="510" width="190" height="90" rx="8"/>
+  <text class="t" x="969" y="534">Reaper Lambda</text>
+  <text x="969" y="554">every 10 min; scales ECS</text>
+  <text x="969" y="570">to zero, then deletes</text>
+
+  <rect class="aws" x="325" y="640" width="190" height="100" rx="8"/>
+  <text class="t" x="339" y="664">Amazon Connect</text>
+  <text x="339" y="684">flow with error branch,</text>
+  <text x="339" y="700">Lex bot, Nova Sonic S2S,</text>
+  <text x="339" y="716">voice Matthew</text>
+  <rect class="aws" x="535" y="640" width="190" height="100" rx="8"/>
+  <text class="t" x="549" y="664">PO status Lambda</text>
+  <text x="549" y="684">get_po_status for Lex</text>
+  <text x="549" y="700">(same handler as host)</text>
+  <rect class="aws" x="745" y="640" width="190" height="100" rx="8"/>
+  <text class="t" x="759" y="664">GitHub OIDC roles</text>
+  <text x="759" y="684">demo, infra, teardown;</text>
+  <text x="759" y="700">each trusts one</text>
+  <text x="759" y="716">Environment only</text>
+  <rect class="aws" x="955" y="640" width="190" height="100" rx="8"/>
+  <text class="t" x="969" y="664">Alerts</text>
+  <text x="969" y="684">SNS email: created,</text>
+  <text x="969" y="700">deleted, failed, errors;</text>
+  <text x="969" y="716">Budgets $10 and $30</text>
+
+  <!-- GitHub -->
+  <rect class="frame" x="40" y="470" width="220" height="290" rx="12"/>
+  <text class="h2" x="56" y="494">GitHub Actions</text>
+  <rect class="ci" x="56" y="508" width="188" height="52" rx="8"/>
+  <text class="t" x="70" y="530">ci.yml</text>
+  <text x="70" y="548">hooks + image, no AWS</text>
+  <rect class="ci" x="56" y="570" width="188" height="52" rx="8"/>
+  <text class="t" x="70" y="592">demo-up</text>
+  <text x="70" y="610">your approval, 1–8 h</text>
+  <rect class="ci" x="56" y="632" width="188" height="52" rx="8"/>
+  <text class="t" x="70" y="654">demo-down</text>
+  <text x="70" y="672">early teardown</text>
+  <rect class="ci" x="56" y="694" width="188" height="52" rx="8"/>
+  <text class="t" x="70" y="716">infra-deploy</text>
+  <text x="70" y="734">persistent stack</text>
+
+  <!-- Edges -->
+  <path class="arrow" d="M244 160 H326"/>
+  <text class="m" x="285" y="150" text-anchor="middle">HTTPS, WSS</text>
+  <path class="darrow" d="M244 320 H280 V190 H326"/>
+  <path class="arrow" d="M430 210 V306"/>
+  <text class="m" x="438" y="262">static site</text>
+  <path class="arrow" d="M530 175 H586"/>
+  <text class="m" x="558" y="166" text-anchor="middle">/ws</text>
+  <text class="m" x="558" y="196" text-anchor="middle">/api</text>
+  <path class="arrow" d="M690 210 V256"/>
+  <path class="arrow" d="M790 290 L876 200"/>
+  <text class="m" x="846" y="262" text-anchor="middle">audio,</text>
+  <text class="m" x="846" y="276" text-anchor="middle">tool use</text>
+  <path class="arrow" d="M650 380 V506"/>
+  <text class="m" x="656" y="440">traces</text>
+  <path class="darrow" d="M770 380 V506"/>
+  <text class="m" x="764" y="470" text-anchor="end">code check</text>
+  <path class="arrow" d="M470 506 V450 H610 V384"/>
+  <text class="m" x="480" y="444">image</text>
+  <path class="darrow" d="M244 380 H285 V690 H321"/>
+  <text class="m" x="277" y="620" transform="rotate(-90 277 620)" text-anchor="middle">WebRTC call</text>
+  <path class="arrow" d="M515 690 H531"/>
+  <path class="kill" d="M1050 506 V440 H805 V414"/>
+  <text class="m" x="930" y="432" text-anchor="middle">deletes the app stack at expiry</text>
+  <path class="arrow" d="M1050 600 V636"/>
+  <path class="arrow" d="M150 760 V800 H840 V744"/>
+  <text class="m" x="495" y="816" text-anchor="middle">OIDC: each workflow assumes the role of its own Environment</text>
+</svg>

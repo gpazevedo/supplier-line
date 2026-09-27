@@ -1,0 +1,218 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 930" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">AI SDLC used to build Supplier Line</title>
+  <desc id="d">An owner and an Opus orchestrator drive work streams from the build plan. Each stream runs in its own git worktree with a Claude agent, passes hooks, independent verification, merge, push and CI. Phases, human checkpoints and guardrails are shown below.</desc>
+  <style>
+    svg { --bg:#ffffff; --ink:#1f2328; --muted:#59636e; --line:#8c959f; --frame:#d0d7de;
+          --ai:#efe9ff; --ai-s:#6639ba; --hu:#fff4d6; --hu-s:#9a6700; --ci:#dafbe1; --ci-s:#1a7f37;
+          --doc:#ddf4ff; --doc-s:#0969da; --gd:#ffebe9; --gd-s:#cf222e; }
+    @media (prefers-color-scheme: dark) {
+      svg { --bg:#0d1117; --ink:#e6edf3; --muted:#9198a1; --line:#6e7681; --frame:#3d444d;
+            --ai:#2b2350; --ai-s:#b39dff; --hu:#3b2e0f; --hu-s:#e3b341; --ci:#12301e; --ci-s:#56d364;
+            --doc:#0c2d4a; --doc-s:#58a6ff; --gd:#3c1618; --gd-s:#ff7b72; }
+    }
+    .bg { fill: var(--bg); }
+    text { fill: var(--ink); font-size: 13px; }
+    .h1 { font-size: 22px; font-weight: 700; }
+    .h2 { font-size: 15px; font-weight: 700; }
+    .t { font-size: 14px; font-weight: 700; }
+    .m { fill: var(--muted); font-size: 12px; }
+    .s { font-size: 11px; }
+    .frame { fill: none; stroke: var(--frame); stroke-width: 1.5; }
+    .ai { fill: var(--ai); stroke: var(--ai-s); stroke-width: 1.5; }
+    .hu { fill: var(--hu); stroke: var(--hu-s); stroke-width: 1.5; }
+    .ci { fill: var(--ci); stroke: var(--ci-s); stroke-width: 1.5; }
+    .doc { fill: var(--doc); stroke: var(--doc-s); stroke-width: 1.5; }
+    .gd { fill: var(--gd); stroke: var(--gd-s); stroke-width: 1.5; }
+    .todo { fill: var(--bg); stroke-dasharray: 5 4; }
+    .wip { fill: var(--bg); }
+    .arrow { fill: none; stroke: var(--line); stroke-width: 1.8; marker-end: url(#a); }
+    .back { fill: none; stroke: var(--gd-s); stroke-width: 1.6; stroke-dasharray: 6 4; marker-end: url(#ar); }
+    .ah { fill: var(--line); }
+    .ahr { fill: var(--gd-s); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ahr" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="930"/>
+
+  <text class="h1" x="40" y="44">How Supplier Line is built: an AI-driven SDLC</text>
+
+  <!-- Top: inputs, orchestrator, owner -->
+  <rect class="doc" x="40" y="70" width="320" height="120" rx="10"/>
+  <text class="t" x="58" y="98">Specification</text>
+  <text x="58" y="122">docs/build-plan.md: 23 work streams,</text>
+  <text x="58" y="140">done criteria, model per stream</text>
+  <text x="58" y="164">CLAUDE.md: hard rules for every agent</text>
+
+  <rect class="ai" x="440" y="70" width="320" height="120" rx="10"/>
+  <text class="t" x="458" y="98">Orchestrator: Claude Opus 5.5</text>
+  <text x="458" y="122">Runs in a herdr pane. Briefs agents,</text>
+  <text x="458" y="140">verifies, merges and pushes.</text>
+  <text x="458" y="164">Never writes feature code.</text>
+
+  <rect class="hu" x="840" y="70" width="320" height="120" rx="10"/>
+  <text class="t" x="858" y="98">Owner (human)</text>
+  <text x="858" y="122">Records clips, deploys stacks,</text>
+  <text x="858" y="140">approves demo-up, listens at H2,</text>
+  <text x="858" y="164">makes the decisions</text>
+
+  <path class="arrow" d="M360 130 H436"/>
+  <path class="arrow" d="M762 118 H836"/>
+  <path class="arrow" d="M838 146 H764"/>
+  <text class="m" x="800" y="110" text-anchor="middle">reports</text>
+  <text class="m" x="800" y="164" text-anchor="middle">decisions</text>
+  <path class="arrow" d="M600 190 V236"/>
+
+  <!-- Per-stream loop -->
+  <rect class="frame" x="40" y="240" width="1120" height="340" rx="12"/>
+  <text class="h2" x="60" y="266">Per-stream loop · up to 4 agents in parallel</text>
+
+  <rect class="doc" x="70" y="282" width="240" height="110" rx="10"/>
+  <text class="t" x="86" y="308">1  Brief</text>
+  <text x="86" y="332">Stream row from the plan:</text>
+  <text x="86" y="350">output, done criteria,</text>
+  <text x="86" y="368">skill and model</text>
+
+  <rect class="ai" x="350" y="282" width="240" height="110" rx="10"/>
+  <text class="t" x="366" y="308">2  Isolate</text>
+  <text x="366" y="332">git worktree and branch,</text>
+  <text x="366" y="350">sibling herdr pane, agent</text>
+  <text x="366" y="368">on the stream's model</text>
+
+  <rect class="ai" x="630" y="282" width="240" height="110" rx="10"/>
+  <text class="t" x="646" y="308">3  Build</text>
+  <text x="646" y="332">Haiku, Sonnet or Opus agent</text>
+  <text x="646" y="350">works test-first, proves root</text>
+  <text x="646" y="368">causes, checks real Bedrock</text>
+
+  <rect class="ci" x="910" y="282" width="230" height="110" rx="10"/>
+  <text class="t" x="926" y="308">4  Commit</text>
+  <text x="926" y="332">pre-commit: Prettier,</text>
+  <text x="926" y="350">ESLint, secret scan,</text>
+  <text x="926" y="368">actionlint, YAML, JSON</text>
+
+  <rect class="ai" x="910" y="452" width="230" height="110" rx="10"/>
+  <text class="t" x="926" y="478">5  Verify</text>
+  <text x="926" y="502">Orchestrator re-runs tests,</text>
+  <text x="926" y="520">check:traces and its own</text>
+  <text x="926" y="538">real-Bedrock replay</text>
+
+  <rect class="ai" x="630" y="452" width="240" height="110" rx="10"/>
+  <text class="t" x="646" y="478">6  Merge</text>
+  <text x="646" y="502">merge --no-ff into main,</text>
+  <text x="646" y="520">in plan order; worktree</text>
+  <text x="646" y="538">and pane removed</text>
+
+  <rect class="ci" x="350" y="452" width="240" height="110" rx="10"/>
+  <text class="t" x="366" y="478">7  Push</text>
+  <text x="366" y="502">pre-push: typecheck, tests</text>
+  <text x="366" y="520">(incl. axe WCAG 2.2 AA),</text>
+  <text x="366" y="538">cdk:check, check:traces</text>
+
+  <rect class="ci" x="70" y="452" width="240" height="110" rx="10"/>
+  <text class="t" x="86" y="478">8  CI on GitHub</text>
+  <text x="86" y="502">ci.yml: every hook plus</text>
+  <text x="86" y="520">the ARM64 image build,</text>
+  <text x="86" y="538">no AWS credentials</text>
+
+  <path class="arrow" d="M310 337 H346"/>
+  <path class="arrow" d="M590 337 H626"/>
+  <path class="arrow" d="M870 337 H906"/>
+  <path class="arrow" d="M1025 392 V448"/>
+  <path class="arrow" d="M910 507 H874"/>
+  <path class="arrow" d="M630 507 H594"/>
+  <path class="arrow" d="M350 507 H314"/>
+  <path class="arrow" d="M70 507 H54 V337 H66"/>
+  <text class="m s" x="48" y="425" transform="rotate(-90 48 425)" text-anchor="middle">next stream</text>
+
+  <path class="back" d="M935 452 C 935 418, 790 420, 790 396"/>
+  <text class="m" x="770" y="420" text-anchor="end">fails: evidence goes back to the agent,</text>
+  <text class="m" x="770" y="436" text-anchor="end">or the stream reruns on a stronger model</text>
+
+  <!-- Phases and checkpoints -->
+  <text class="h2" x="40" y="620">Phases and human checkpoints</text>
+  <text class="m" x="1160" y="620" text-anchor="end">status on 27 Sep 2026</text>
+  <path class="arrow" d="M60 668 H1018"/>
+
+  <g>
+    <path class="hu" d="M95 646 L117 668 L95 690 L73 668 z"/>
+    <text class="s" x="95" y="672" text-anchor="middle" font-weight="700">H0 H1</text>
+    <text class="m s" x="95" y="710" text-anchor="middle">setup, clips</text>
+
+    <rect class="ai" x="148" y="646" width="76" height="44" rx="8"/>
+    <text class="s" x="186" y="664" text-anchor="middle" font-weight="700">Phase 0</text>
+    <text class="s" x="186" y="680" text-anchor="middle">S01</text>
+    <text class="m s" x="186" y="710" text-anchor="middle">scaffold</text>
+
+    <rect class="ai" x="236" y="646" width="88" height="44" rx="8"/>
+    <text class="s" x="280" y="664" text-anchor="middle" font-weight="700">Phase 1</text>
+    <text class="s" x="280" y="680" text-anchor="middle">S02–S11, S21</text>
+    <text class="m s" x="280" y="710" text-anchor="middle">core and infra</text>
+
+    <path class="hu wip" d="M365 646 L387 668 L365 690 L343 668 z"/>
+    <text class="s" x="365" y="672" text-anchor="middle" font-weight="700">H0.2</text>
+    <text class="m s" x="365" y="710" text-anchor="middle">stack live</text>
+
+    <rect class="ai" x="408" y="646" width="92" height="44" rx="8"/>
+    <text class="s" x="454" y="664" text-anchor="middle" font-weight="700">Phase 2</text>
+    <text class="s" x="454" y="680" text-anchor="middle">S12, S13, S22</text>
+    <text class="m s" x="454" y="710" text-anchor="middle">real-time audio</text>
+
+    <path class="hu wip" d="M540 646 L562 668 L540 690 L518 668 z"/>
+    <text class="s" x="540" y="672" text-anchor="middle" font-weight="700">H2</text>
+    <text class="m s" x="540" y="710" text-anchor="middle">listen</text>
+
+    <rect class="ai wip" x="582" y="646" width="104" height="44" rx="8"/>
+    <text class="s" x="634" y="664" text-anchor="middle" font-weight="700">Phase 3</text>
+    <text class="s" x="634" y="680" text-anchor="middle">S14–S18, S23</text>
+    <text class="m s" x="634" y="710" text-anchor="middle">failures, access,</text>
+    <text class="m s" x="634" y="724" text-anchor="middle">Connect, a11y</text>
+
+    <rect class="ai todo" x="706" y="646" width="76" height="44" rx="8"/>
+    <text class="s" x="744" y="664" text-anchor="middle" font-weight="700">Phase 4</text>
+    <text class="s" x="744" y="680" text-anchor="middle">S19</text>
+    <text class="m s" x="744" y="710" text-anchor="middle">final review</text>
+
+    <path class="hu todo" d="M822 646 L844 668 L822 690 L800 668 z"/>
+    <text class="s" x="822" y="672" text-anchor="middle" font-weight="700">H3</text>
+    <text class="m s" x="822" y="710" text-anchor="middle">demo-up 2 h</text>
+
+    <rect class="ai todo" x="864" y="646" width="76" height="44" rx="8"/>
+    <text class="s" x="902" y="664" text-anchor="middle" font-weight="700">Phase 5</text>
+    <text class="s" x="902" y="680" text-anchor="middle">S20</text>
+    <text class="m s" x="902" y="710" text-anchor="middle">README, ADRs</text>
+
+    <path class="hu todo" d="M982 646 L1004 668 L982 690 L960 668 z"/>
+    <text class="s" x="982" y="672" text-anchor="middle" font-weight="700">H4</text>
+    <text class="m s" x="982" y="710" text-anchor="middle">demo video</text>
+  </g>
+
+  <g transform="translate(1060 646)">
+    <rect class="ai" x="0" y="0" width="16" height="12" rx="3"/><text class="m s" x="22" y="10">done</text>
+    <rect class="ai wip" x="0" y="18" width="16" height="12" rx="3"/><text class="m s" x="22" y="28">in progress</text>
+    <rect class="ai todo" x="0" y="36" width="16" height="12" rx="3"/><text class="m s" x="22" y="46">not started</text>
+  </g>
+
+  <!-- Guardrails -->
+  <text class="h2" x="40" y="780">Guardrails</text>
+  <rect class="gd" x="40" y="794" width="260" height="96" rx="10"/>
+  <text class="t" x="56" y="820">Scoped AWS access</text>
+  <text x="56" y="844">Profile supplier-dev only;</text>
+  <text x="56" y="862">ECS, CloudFormation, IAM denied</text>
+
+  <rect class="gd" x="327" y="794" width="260" height="96" rx="10"/>
+  <text class="t" x="343" y="820">Denied commands</text>
+  <text x="343" y="844">cdk deploy and destroy, gh api,</text>
+  <text x="343" y="862">gh workflow, --no-verify</text>
+
+  <rect class="gd" x="613" y="794" width="260" height="96" rx="10"/>
+  <text class="t" x="629" y="820">Consent-gated deploys</text>
+  <text x="629" y="844">Only demo-up, approved in</text>
+  <text x="629" y="862">GitHub Environment demo, 1–8 h</text>
+
+  <rect class="gd" x="900" y="794" width="260" height="96" rx="10"/>
+  <text class="t" x="916" y="820">Reaper Lambda</text>
+  <text x="916" y="844">Deletes the app stack at expiry;</text>
+  <text x="916" y="862">checks every 10 minutes</text>
+</svg>

@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-labelledby="t d">
+  <title id="t">Inside the session host during one call</title>
+  <desc id="d">The browser softphone streams caller audio over a WebSocket to the host. The host's session keeps one current Sonic connection and, during rotation, a next one, streaming to Nova 2 Sonic. Tool calls go to get_po_status. A playback ledger records planned, generated and heard audio per turn, and the trace writer saves each session for the five trace checks and the viewer.</desc>
+  <style>
+    svg { --bg:#ffffff; --ink:#1f2328; --muted:#59636e; --line:#8c959f; --frame:#d0d7de;
+          --web:#ddf4ff; --web-s:#0969da; --ai:#efe9ff; --ai-s:#6639ba; --aws:#fff1e5; --aws-s:#bc4c00;
+          --ci:#dafbe1; --ci-s:#1a7f37; }
+    @media (prefers-color-scheme: dark) {
+      svg { --bg:#0d1117; --ink:#e6edf3; --muted:#9198a1; --line:#6e7681; --frame:#3d444d;
+            --web:#0c2d4a; --web-s:#58a6ff; --ai:#2b2350; --ai-s:#b39dff; --aws:#3a220f; --aws-s:#ffa657;
+            --ci:#12301e; --ci-s:#56d364; }
+    }
+    .bg { fill: var(--bg); }
+    text { fill: var(--ink); font-size: 13px; }
+    .h1 { font-size: 22px; font-weight: 700; }
+    .h2 { font-size: 14px; font-weight: 700; }
+    .t { font-size: 14px; font-weight: 700; }
+    .m { fill: var(--muted); font-size: 12px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; fill: var(--muted); }
+    .frame { fill: none; stroke: var(--frame); stroke-width: 1.5; }
+    .web { fill: var(--web); stroke: var(--web-s); stroke-width: 1.5; }
+    .ai { fill: var(--ai); stroke: var(--ai-s); stroke-width: 1.5; }
+    .aws { fill: var(--aws); stroke: var(--aws-s); stroke-width: 1.5; }
+    .ci { fill: var(--ci); stroke: var(--ci-s); stroke-width: 1.5; }
+    .next { fill: var(--bg); stroke: var(--ai-s); stroke-width: 1.5; stroke-dasharray: 5 4; }
+    .arrow { fill: none; stroke: var(--line); stroke-width: 1.8; marker-end: url(#a); }
+    .ah { fill: var(--line); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="ah" d="M0,0 L10,5 L0,10 z"/></marker>
+  </defs>
+  <rect class="bg" width="1200" height="760"/>
+
+  <text class="h1" x="40" y="44">Inside the session host during one call</text>
+
+  <!-- Browser -->
+  <rect class="frame" x="40" y="80" width="230" height="420" rx="12"/>
+  <text class="h2" x="56" y="104">Softphone (browser)</text>
+  <rect class="web" x="56" y="120" width="198" height="84" rx="8"/>
+  <text class="t" x="70" y="144">Capture worklet</text>
+  <text x="70" y="164">mic to 16 kHz, 16-bit</text>
+  <text x="70" y="182">mono PCM frames</text>
+  <rect class="web" x="56" y="220" width="198" height="120" rx="8"/>
+  <text class="t" x="70" y="244">Playback worklet</text>
+  <text x="70" y="264">plays 24 kHz agent audio,</text>
+  <text x="70" y="282">reports ms played per turn,</text>
+  <text x="70" y="300">drops its queue on flush</text>
+  <text class="code" x="70" y="324">playback-queue.ts</text>
+  <rect class="web" x="56" y="356" width="198" height="120" rx="8"/>
+  <text class="t" x="70" y="380">Status and transcript</text>
+  <text x="70" y="400">aria-live region: call</text>
+  <text x="70" y="418">state and transcript lines</text>
+  <text x="70" y="436">WCAG 2.2 AA, axe in CI</text>
+
+  <!-- Wire -->
+  <path class="arrow" d="M270 150 H446"/>
+  <path class="arrow" d="M446 186 H270"/>
+  <text class="m" x="358" y="126" text-anchor="middle">up: caller PCM,</text>
+  <text class="m" x="358" y="140" text-anchor="middle">played ms, flushed</text>
+  <text class="m" x="358" y="206" text-anchor="middle">down: agent audio, turn</text>
+  <text class="m" x="358" y="220" text-anchor="middle">marker, flush, transcript</text>
+  <text class="code" x="358" y="246" text-anchor="middle">WebSocket /ws</text>
+
+  <!-- Host -->
+  <rect class="frame" x="450" y="80" width="460" height="600" rx="12"/>
+  <text class="h2" x="466" y="104">Session host (Node, TypeScript)</text>
+
+  <rect class="ai" x="470" y="120" width="420" height="80" rx="8"/>
+  <text class="t" x="486" y="144">WebSocket server</text>
+  <text x="486" y="164">one session per socket; access code and caps come in S17</text>
+  <text class="code" x="486" y="186">sessions.ts</text>
+
+  <rect class="ai" x="470" y="220" width="420" height="80" rx="8"/>
+  <text class="t" x="486" y="244">Sonic session: the whole call</text>
+  <text x="486" y="264">only the current connection is heard; answers tool calls</text>
+  <text class="code" x="486" y="286">session.ts  prompt.ts  events.ts</text>
+
+  <rect class="ai" x="470" y="320" width="200" height="140" rx="8"/>
+  <text class="t" x="486" y="344">Rotator (FH-05)</text>
+  <text x="486" y="364">after 6 min, once the</text>
+  <text x="486" y="382">agent speaks: open next,</text>
+  <text x="486" y="400">buffer last 3 s of caller</text>
+  <text x="486" y="418">audio, hand over (≤ 30 s)</text>
+  <text class="code" x="486" y="444">rotator.ts</text>
+
+  <rect class="ai" x="690" y="320" width="200" height="62" rx="8"/>
+  <text class="t" x="706" y="344">Current connection</text>
+  <text class="code" x="706" y="366">connection.ts</text>
+  <rect class="next" x="690" y="398" width="200" height="62" rx="8"/>
+  <text class="t" x="706" y="422">Next connection</text>
+  <text class="m" x="706" y="442">only during a rotation</text>
+
+  <rect class="ai" x="470" y="480" width="200" height="90" rx="8"/>
+  <text class="t" x="486" y="504">Response tracker</text>
+  <text x="486" y="524">knows when a reply is</text>
+  <text x="486" y="542">complete or interrupted</text>
+  <text class="code" x="486" y="562">response.ts</text>
+
+  <rect class="ai" x="690" y="480" width="200" height="90" rx="8"/>
+  <text class="t" x="706" y="504">Turns and ledger</text>
+  <text x="706" y="524">planned, generated,</text>
+  <text x="706" y="542">heard; flush time</text>
+  <text class="code" x="706" y="562">turns.ts  ledger.ts</text>
+
+  <rect class="ai" x="470" y="590" width="420" height="70" rx="8"/>
+  <text class="t" x="486" y="614">History for the next connection</text>
+  <text x="486" y="634">replays the heard text, not the generated text</text>
+  <text class="code" x="486" y="652">history.ts</text>
+
+  <!-- Right column -->
+  <rect class="aws" x="960" y="300" width="200" height="110" rx="8"/>
+  <text class="t" x="976" y="324">Nova 2 Sonic</text>
+  <text x="976" y="344">Bedrock bidirectional</text>
+  <text x="976" y="362">stream, voice Matthew,</text>
+  <text x="976" y="380">8-minute connection limit</text>
+
+  <rect class="ci" x="960" y="120" width="200" height="130" rx="8"/>
+  <text class="t" x="976" y="144">get_po_status</text>
+  <text x="976" y="164">Zod schema, PO-XXXXX,</text>
+  <text x="976" y="182">check digit, en-US</text>
+  <text x="976" y="200">rendering spoken exactly</text>
+  <text class="code" x="976" y="224">packages/tools</text>
+
+  <rect class="ci" x="960" y="480" width="200" height="150" rx="8"/>
+  <text class="t" x="976" y="504">Traces</text>
+  <text x="976" y="524">one JSON per session,</text>
+  <text x="976" y="542">local folder or S3;</text>
+  <text x="976" y="560">check:traces runs the</text>
+  <text x="976" y="578">checks; viewer renders</text>
+  <text class="code" x="976" y="604">packages/traces</text>
+
+  <!-- Host edges -->
+  <path class="arrow" d="M680 200 V216"/>
+  <path class="arrow" d="M570 300 V316"/>
+  <path class="arrow" d="M670 350 H686"/>
+  <path class="arrow" d="M670 428 H686"/>
+  <path class="arrow" d="M890 351 H956"/>
+  <path class="arrow" d="M890 429 L956 390"/>
+  <text class="m" x="918" y="458">audio, text,</text>
+  <text class="m" x="918" y="472">tool use</text>
+  <path class="arrow" d="M890 250 H925 V185 H956"/>
+  <text class="m" x="940" y="276" text-anchor="middle">tool call</text>
+  <path class="arrow" d="M890 525 H956"/>
+  <text class="m" x="923" y="518" text-anchor="middle">trace</text>
+  <path class="arrow" d="M470 625 H460 V390 H466"/>
+</svg>
