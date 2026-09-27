@@ -16,6 +16,7 @@ import {
 } from './events.js';
 import type { HistoryMessage } from './history.js';
 import { AsyncQueue } from './queue.js';
+import { STILL_READING_RESULT } from './reading.js';
 import type { RotatingConnection } from './rotator.js';
 
 export const MODEL_ID = 'amazon.nova-2-sonic-v1:0';
@@ -26,6 +27,8 @@ type Body = Record<string, unknown>;
 export interface ConnectionHandlers {
   onEvent(from: SonicConnection, name: string, body: Body): void;
   onToolResult(from: SonicConnection, name: string, rendering: string): void;
+  /** True to hold a lookup because the caller is still reading the code; the model is told so. */
+  callerStillReading(from: SonicConnection): Promise<boolean>;
 }
 
 const encoder = new TextEncoder();
@@ -94,9 +97,12 @@ export class SonicConnection implements RotatingConnection {
 
   private async onToolUse(body: Body): Promise<void> {
     const name = String(body.toolName);
-    const result = await toolUseToResult(String(body.content));
-    const { rendering } = JSON.parse(result) as { rendering: string };
-    this.handlers.onToolResult(this, name, rendering);
+    const reading = await this.handlers.callerStillReading(this);
+    const result = reading ? STILL_READING_RESULT : await toolUseToResult(String(body.content));
+    if (!reading) {
+      const { rendering } = JSON.parse(result) as { rendering: string };
+      this.handlers.onToolResult(this, name, rendering);
+    }
     const events = toolResultEvents(this.ids.prompt, randomUUID(), String(body.toolUseId), result);
     events.forEach((e) => this.input.push(e));
   }

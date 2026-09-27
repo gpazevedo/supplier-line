@@ -73,6 +73,25 @@ it('closingEvents ends audio, prompt, then session', () => {
   expect(closingEvents(ids).map(nameOf)).toEqual(['contentEnd', 'promptEnd', 'sessionEnd']);
 });
 
+describe('system prompt on codes', () => {
+  const DIGIT = '(zero|one|two|three|four|five|six|seven|eight|nine)';
+
+  it('has the agent say codes without "P O dash" and never give an example code', () => {
+    expect(SYSTEM_PROMPT).toMatch(/never say "P O dash"/i);
+    expect(SYSTEM_PROMPT).toMatch(/never give an example code/i);
+    expect(SYSTEM_PROMPT).not.toMatch(new RegExp(`${DIGIT}( ${DIGIT}){4}`, 'i'));
+    expect(SYSTEM_PROMPT).not.toMatch(/\d{5}/);
+  });
+
+  it('accepts codes said with "P O dash", with "P O", or as bare digits', () => {
+    expect(SYSTEM_PROMPT).toMatch(/"P O dash".*"P O".*just the digits/);
+  });
+
+  it('tells the model to wait when a lookup is held because the caller is still reading', () => {
+    expect(SYSTEM_PROMPT).toMatch(/caller_still_reading.*wait/);
+  });
+});
+
 it('system prompt tells the model to speak the rendering exactly', () => {
   expect(SYSTEM_PROMPT).toMatch(/get_po_status/);
   expect(SYSTEM_PROMPT).toMatch(/rendering/);

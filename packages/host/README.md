@@ -18,6 +18,8 @@ The replay streams the clip in real time, plays the agent audio on a wall clock,
 
 Turn detection uses `endpointingSensitivity: LOW`: with `MEDIUM`, Sonic ended the caller's turn in the pause inside a slowly read code and called `get_po_status` with the digits missing (zero-filled) or the last one guessed. The host logs every tool call's input and every caller transcript with the session time, so a wrong code can be traced to what Sonic heard.
 
+Sonic still sometimes calls the tool mid-code, filling the missing digits with zeros or guesses (`sonic/reading.ts`). If the caller has said one to four digits in the current turn, the host holds the lookup until they have said five (at most 4 s), then answers `{"ok":false,"reason":"caller_still_reading"}` without running it, and the model calls again with the whole code. The turn's trace counts these as `early_tool_calls`.
+
 ## Playback ledger and barge-in
 
 Each turn's trace records `audio.planned_ms`, `audio.delivered_ms` (audio Sonic generated) and `audio.played_ms` (audio the client reports it played). Over `/ws`:

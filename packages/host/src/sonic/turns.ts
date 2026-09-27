@@ -14,6 +14,7 @@ interface OpenTurn {
   callerAt: number;
   firstAudioAt?: number;
   tool?: { name: string; rendering: string };
+  earlyToolCalls: number;
   caller: string[];
   spoken: string[];
 }
@@ -46,6 +47,16 @@ export class TurnRecorder {
     if (name === 'textOutput') this.onText(this.blocks.get(id), String(body.content), atMs);
   }
 
+  /** The caller's transcript so far in the current turn. */
+  callerText(): string {
+    return this.current?.caller.join(' ') ?? '';
+  }
+
+  /** Counts a lookup refused because the caller was still reading the code. */
+  onEarlyToolCall(): void {
+    if (this.current) this.current.earlyToolCalls += 1;
+  }
+
   /** Records the rendering a tool returned during the current turn. */
   onToolResult(name: string, rendering: string): void {
     if (this.current) this.current.tool = { name, rendering };
@@ -59,6 +70,7 @@ export class TurnRecorder {
       },
       ...this.ledger.entry(index),
       ...(turn.tool && { tool: turn.tool }),
+      ...(turn.earlyToolCalls > 0 && { early_tool_calls: turn.earlyToolCalls }),
       assistant: { final_text: turn.spoken.join(' ') },
     }));
   }
@@ -105,7 +117,13 @@ export class TurnRecorder {
     }
     if (!block?.final || isInterruption(text)) return;
     if (block.role === 'USER' && this.answered())
-      this.open.push({ index: this.open.length, callerAt: atMs, caller: [], spoken: [] });
+      this.open.push({
+        index: this.open.length,
+        callerAt: atMs,
+        caller: [],
+        spoken: [],
+        earlyToolCalls: 0,
+      });
     else if (block.role === 'USER' && this.current) this.current.callerAt = atMs;
     if (block.role === 'USER') this.current?.caller.push(text.trim());
     if (block.role === 'ASSISTANT' && this.current) this.current.spoken.push(text.trim());
