@@ -20,6 +20,7 @@
     "tools": "workspace:^",
     "traces": "workspace:^",
     "tsx": "^4.23.15",
+    "web": "workspace:^",
     "ws": "^8.21.3"
   }
 }

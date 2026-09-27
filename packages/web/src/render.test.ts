@@ -7,10 +7,13 @@ import { describe, expect, it } from 'vitest';
 import { parseTraceText } from './load.js';
 import { renderTrace } from './render.js';
 
-const dir = join(fileURLToPath(import.meta.url), '../../../traces/samples');
-const samples = readdirSync(dir)
-  .filter((name) => name.endsWith('.json'))
-  .map((name) => ({ name, trace: parseTraceText(readFileSync(join(dir, name), 'utf8')) }));
+const here = fileURLToPath(import.meta.url);
+const dirs = [join(here, '../../../traces/samples'), join(here, '../../../../fixtures/traces')];
+const samples = dirs.flatMap((dir) =>
+  readdirSync(dir)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => ({ name, trace: parseTraceText(readFileSync(join(dir, name), 'utf8')) }))
+);
 
 describe.each(samples)('renders $name', ({ trace }) => {
   const page = renderTrace(trace);

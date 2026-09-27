@@ -1,4 +1,5 @@
 import type { Trace } from 'traces/src/index.js';
+import { PlaybackLedger } from './ledger.js';
 
 type TraceTurn = Trace['turns'][number];
 
@@ -8,6 +9,7 @@ interface Block {
 }
 
 interface OpenTurn {
+  index: number;
   callerAt: number;
   firstAudioAt?: number;
   tool?: { name: string; rendering: string };
@@ -20,17 +22,25 @@ const isInterruption = (text: string) => /"interrupted"\s*:\s*true/.test(text);
 
 /**
  * Folds Sonic output events into trace turns. A turn starts with the caller's transcript;
- * its latency runs from that transcript to the first agent audio chunk.
+ * its latency runs from the caller's last transcript segment to the first agent audio chunk. The playback ledger
+ * records planned, generated and heard audio per turn.
  */
 export class TurnRecorder {
+  readonly ledger = new PlaybackLedger();
   private blocks = new Map<string, Block>();
   private open: OpenTurn[] = [];
+
+  /** Index of the turn now in progress; undefined before the caller first speaks. */
+  get currentTurn(): number | undefined {
+    return this.current?.index;
+  }
 
   /** Feeds one output event, stamped with milliseconds since the session started. */
   onEvent(name: string, body: Body, atMs: number): void {
     const id = String(body.contentId);
     if (name === 'contentStart') this.blocks.set(id, blockOf(body));
-    if (name === 'audioOutput' && this.current) this.current.firstAudioAt ??= atMs;
+    if (name === 'audioOutput') this.onAudio(String(body.content), atMs);
+    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') this.onInterrupted(atMs);
     if (name === 'textOutput') this.onText(this.blocks.get(id), String(body.content), atMs);
   }
 
@@ -45,6 +55,7 @@ export class TurnRecorder {
       latency: {
         voice_to_voice_ms: Math.max(0, (turn.firstAudioAt ?? turn.callerAt) - turn.callerAt),
       },
+      ...this.ledger.entry(index),
       ...(turn.tool && { tool: turn.tool }),
       assistant: { final_text: turn.spoken.join(' ') },
     }));
@@ -54,9 +65,25 @@ export class TurnRecorder {
     return this.open.at(-1);
   }
 
+  private onAudio(base64: string, atMs: number): void {
+    const turn = this.current;
+    if (!turn) return;
+    turn.firstAudioAt ??= atMs;
+    this.ledger.generated(turn.index, Buffer.byteLength(base64, 'base64'));
+  }
+
+  private onInterrupted(atMs: number): void {
+    if (this.currentTurn !== undefined) this.ledger.interrupted(this.currentTurn, atMs);
+  }
+
   private onText(block: Block | undefined, text: string, atMs: number): void {
+    if (block?.role === 'ASSISTANT' && !block.final && this.current) {
+      this.ledger.planned(this.current.index, text);
+    }
     if (!block?.final || isInterruption(text)) return;
-    if (block.role === 'USER' && this.answered()) this.open.push({ callerAt: atMs, spoken: [] });
+    if (block.role === 'USER' && this.answered())
+      this.open.push({ index: this.open.length, callerAt: atMs, spoken: [] });
+    else if (block.role === 'USER' && this.current) this.current.callerAt = atMs;
     if (block.role === 'ASSISTANT' && this.current) this.current.spoken.push(text.trim());
   }
 

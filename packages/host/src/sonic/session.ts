@@ -34,8 +34,10 @@ export function createSonicClient(): BedrockRuntimeClient {
 
 /** What the session reports to its front door as the model responds. */
 export interface SessionListener {
-  /** Agent audio: 24 kHz 16-bit mono PCM. */
-  onAudio(pcm: Buffer): void;
+  /** Agent audio: 24 kHz 16-bit mono PCM, for the turn in progress (none before the caller speaks). */
+  onAudio(pcm: Buffer, turn: number | undefined): void;
+  /** Sonic detected the caller barging in: queued agent audio should be dropped. */
+  onInterrupted(): void;
   /** A FINAL transcript line, from the caller or the agent. */
   onTranscript(role: 'USER' | 'ASSISTANT', text: string): void;
 }
@@ -90,6 +92,16 @@ export class SonicSession {
     this.input.end();
   }
 
+  /** The client's running total of milliseconds played for a turn. */
+  onPlayed(turn: number, ms: number): void {
+    this.recorder.ledger.played(turn, ms);
+  }
+
+  /** The client flushed its queue after a barge-in, having played `ms` of the turn. */
+  onFlushed(turn: number, ms: number): void {
+    this.recorder.ledger.flushed(turn, ms, this.elapsedMs());
+  }
+
   trace(): Trace {
     return {
       session_id: this.id,
@@ -101,11 +113,20 @@ export class SonicSession {
   }
 
   private onEvent(name: string, body: Body): void {
-    this.recorder.onEvent(name, body, Date.now() - this.startedAt.getTime());
+    this.recorder.onEvent(name, body, this.elapsedMs());
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'audioOutput') this.listener.onAudio(Buffer.from(String(body.content), 'base64'));
+    if (name === 'audioOutput') this.onAudio(String(body.content));
+    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') this.listener.onInterrupted();
     if (name === 'toolUse') void this.onToolUse(body);
+  }
+
+  private elapsedMs(): number {
+    return Date.now() - this.startedAt.getTime();
+  }
+
+  private onAudio(base64: string): void {
+    this.listener.onAudio(Buffer.from(base64, 'base64'), this.recorder.currentTurn);
   }
 
   private onContentStart(body: Body): void {
