@@ -63,17 +63,25 @@ export class TurnRecorder {
     }));
   }
 
-  /** Caller and agent text per turn; a barged-in answer keeps only what the caller heard. */
+  /**
+   * Caller and agent text per turn; a barged-in answer keeps only what the caller heard. An answer
+   * built from a tool result is left out: a new connection copies earlier replies, so it would
+   * speak that PO data again without calling the tool.
+   */
   history(): HistoryMessage[] {
     return this.open.flatMap((turn) => {
-      const spoken = turn.spoken.join(' ');
-      const heardMs = this.ledger.heardMs(turn.index);
       const messages: HistoryMessage[] = [
         { role: 'USER', text: turn.caller.join(' ') },
-        { role: 'ASSISTANT', text: heardMs === undefined ? spoken : heardText(spoken, heardMs) },
+        { role: 'ASSISTANT', text: turn.tool ? '' : this.heard(turn) },
       ];
       return messages.filter((message) => message.text);
     });
+  }
+
+  private heard(turn: OpenTurn): string {
+    const spoken = turn.spoken.join(' ');
+    const heardMs = this.ledger.heardMs(turn.index);
+    return heardMs === undefined ? spoken : heardText(spoken, heardMs);
   }
 
   private get current(): OpenTurn | undefined {

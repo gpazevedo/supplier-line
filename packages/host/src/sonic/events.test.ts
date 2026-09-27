@@ -7,7 +7,7 @@ import {
   toolResultEvents,
   type SonicInputEvent,
 } from './events.js';
-import { SYSTEM_PROMPT } from './prompt.js';
+import { CONTINUED_PROMPT, SYSTEM_PROMPT } from './prompt.js';
 
 const ids = { prompt: 'p1', system: 's1', audio: 'a1' };
 const nameOf = (e: SonicInputEvent) => Object.keys(e.event)[0];
@@ -77,6 +77,15 @@ it('system prompt tells the model to speak the rendering exactly', () => {
   expect(SYSTEM_PROMPT).toMatch(/get_po_status/);
   expect(SYSTEM_PROMPT).toMatch(/rendering/);
   expect(SYSTEM_PROMPT).toMatch(/exactly/i);
+});
+
+it('setupEvents sends the given system prompt', () => {
+  expect(body(setupEvents(ids, CONTINUED_PROMPT)[3])).toMatchObject({ content: CONTINUED_PROMPT });
+});
+
+it('a continued connection is told PO answers were left out and must be looked up again', () => {
+  expect(CONTINUED_PROMPT.startsWith(SYSTEM_PROMPT)).toBe(true);
+  expect(CONTINUED_PROMPT.slice(SYSTEM_PROMPT.length)).toMatch(/left out.*get_po_status/s);
 });
 
 it('resumeEvents replays history as non-interactive TEXT blocks before the audio container', () => {

@@ -2,7 +2,9 @@ import { PlaybackQueue } from './playback-queue.js';
 
 /** What the page tells the player: a turn marker, agent audio, or a flush after a barge-in. */
 export type PlaybackCommand =
-  { type: 'turn'; index: number } | { type: 'audio'; samples: Float32Array } | { type: 'flush' };
+  | { type: 'turn'; index: number }
+  | { type: 'audio'; samples: Float32Array }
+  | { type: 'flush'; turn?: number };
 
 /** What the player reports back, forwarded as-is to the host. */
 export interface PlaybackReport {
@@ -34,13 +36,14 @@ class Playback extends AudioWorkletProcessor {
   private onCommand(command: PlaybackCommand): void {
     if (command.type === 'turn') this.turn = command.index;
     if (command.type === 'audio') this.queue.push(this.turn, command.samples);
-    if (command.type === 'flush') this.flush();
+    if (command.type === 'flush') this.flush(command.turn ?? this.turn);
   }
 
-  private flush(): void {
+  /** Drops queued audio and reports how much of the interrupted turn played. */
+  private flush(turn: number): void {
     this.queue.flush();
     this.report();
-    this.post({ type: 'flushed', turn: this.turn, ms: this.queue.playedMs(this.turn) });
+    this.post({ type: 'flushed', turn, ms: this.queue.playedMs(turn) });
   }
 
   private report(): void {

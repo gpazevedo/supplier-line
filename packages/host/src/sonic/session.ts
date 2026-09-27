@@ -4,6 +4,7 @@ import { NodeHttp2Handler } from '@smithy/node-http-handler';
 import type { Trace } from 'traces/src/index.js';
 import { SonicConnection } from './connection.js';
 import { Rotator, type RotationStats, type RotatorOptions } from './rotator.js';
+import { CONTINUED_PROMPT, SYSTEM_PROMPT } from './prompt.js';
 import { isInterruption, TurnRecorder } from './turns.js';
 
 /** Bedrock client for `us-east-1` over HTTP/2, which the bidirectional stream requires. */
@@ -23,8 +24,8 @@ export function createSonicClient(): BedrockRuntimeClient {
 export interface SessionListener {
   /** Agent audio: 24 kHz 16-bit mono PCM, for the turn in progress (none before the caller speaks). */
   onAudio(pcm: Buffer, turn: number | undefined): void;
-  /** Sonic detected the caller barging in: queued agent audio should be dropped. */
-  onInterrupted(): void;
+  /** Sonic detected the caller barging in on `turn`: queued agent audio should be dropped. */
+  onInterrupted(turn: number | undefined): void;
   /** A FINAL transcript line, from the caller or the agent. */
   onTranscript(role: 'USER' | 'ASSISTANT', text: string): void;
 }
@@ -52,12 +53,12 @@ export class SonicSession {
     private readonly listener: SessionListener,
     rotation: RotatorOptions
   ) {
-    const first = this.connect();
+    const first = this.connect(SYSTEM_PROMPT);
     first.resume([]);
     this.rotator = new Rotator(
       first,
       {
-        open: () => this.connect(),
+        open: () => this.connect(CONTINUED_PROMPT),
         history: () => this.recorder.history(),
         rotated: (stats) => this.onRotated(stats),
       },
@@ -100,15 +101,19 @@ export class SonicSession {
     };
   }
 
-  private connect(): SonicConnection {
-    const connection = new SonicConnection(this.client, {
-      onEvent: (from, name, body) => this.onEvent(from, name, body),
-      onToolResult: (from, name, rendering) => {
-        if (from !== this.rotator.current) return;
-        this.recorder.onToolResult(name, rendering);
-        this.rotator.onToolResult(from, rendering);
+  private connect(systemPrompt: string): SonicConnection {
+    const connection = new SonicConnection(
+      this.client,
+      {
+        onEvent: (from, name, body) => this.onEvent(from, name, body),
+        onToolResult: (from, name, rendering) => {
+          if (from !== this.rotator.current) return;
+          this.recorder.onToolResult(name, rendering);
+          this.rotator.onToolResult(from, rendering);
+        },
       },
-    });
+      systemPrompt
+    );
     connection.done.then(
       () => this.onEnded(connection),
       (error: unknown) => this.onEnded(connection, error)
@@ -144,11 +149,17 @@ export class SonicSession {
       return;
     }
     this.recorder.onEvent(name, body, this.elapsedMs());
+    if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
     if (name === 'audioOutput') this.onAudio(String(body.content));
-    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') this.listener.onInterrupted();
+    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
+      this.listener.onInterrupted(this.recorder.currentTurn);
     this.rotator.onOutput(from, name, body);
+  }
+
+  private log(line: string): void {
+    console.log(`session ${this.id} +${this.elapsedMs()} ms: ${line}`);
   }
 
   private elapsedMs(): number {
@@ -171,6 +182,7 @@ export class SonicSession {
     const text = String(body.content);
     if (!this.finalIds.has(id) || isInterruption(text)) return;
     if (role !== 'USER' && role !== 'ASSISTANT') return;
+    if (role === 'USER') this.log(`caller ${JSON.stringify(text)}`);
     this.listener.onTranscript(role, text);
   }
 }

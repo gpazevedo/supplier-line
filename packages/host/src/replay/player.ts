@@ -23,12 +23,12 @@ export class ReplayPlayer {
     this.queue.push(this.turn, floatFromPcm16(pcm));
   }
 
-  /** Drops queued audio and tells the host how much of the turn played. */
-  flush(): number {
+  /** Drops queued audio and tells the host how much of the interrupted turn played. */
+  flush(turn = this.turn): number {
     this.tick();
     this.queue.flush();
-    const ms = this.queue.playedMs(this.turn);
-    this.send({ type: 'flushed', turn: this.turn, ms });
+    const ms = this.queue.playedMs(turn);
+    this.send({ type: 'flushed', turn, ms });
     return ms;
   }
 

@@ -1,112 +1,114 @@
 {
-  "session_id": "ce574e38-aec5-4b55-9b9b-23f4b03169e6",
+  "session_id": "4007f75a-bb10-4fe7-abf0-5794b77c2199",
   "front_door": "softphone",
-  "started_at": "2026-09-27T04:46:05.339Z",
+  "started_at": "2026-09-27T17:31:55.816Z",
   "turns": [
     {
       "index": 0,
       "latency": {
-        "voice_to_voice_ms": 535
+        "voice_to_voice_ms": 1484
       },
       "audio": {
-        "planned_ms": 16200,
-        "delivered_ms": 16200,
-        "played_ms": 16200
+        "planned_ms": 14800,
+        "delivered_ms": 14800,
+        "played_ms": 14800
       },
       "tool": {
         "name": "get_po_status",
-        "rendering": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+        "rendering": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       },
       "assistant": {
-        "final_text": "Go on Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+        "final_text": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       }
     },
     {
       "index": 1,
       "latency": {
-        "voice_to_voice_ms": 825
+        "voice_to_voice_ms": 1249
       },
       "audio": {
-        "planned_ms": 5280,
-        "delivered_ms": 5280,
-        "played_ms": 5280
+        "planned_ms": 14840,
+        "delivered_ms": 14840,
+        "played_ms": 14840
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       },
       "assistant": {
-        "final_text": "I can only help with purchase-order status. If you have another purchase order code, I can look that up for you."
+        "final_text": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       }
     },
     {
       "index": 2,
       "latency": {
-        "voice_to_voice_ms": 672
+        "voice_to_voice_ms": 2445
       },
       "audio": {
-        "planned_ms": 14120,
-        "delivered_ms": 14120,
-        "played_ms": 14120
+        "planned_ms": 14840,
+        "delivered_ms": 14840,
+        "played_ms": 14840
       },
       "tool": {
         "name": "get_po_status",
-        "rendering": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+        "rendering": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       },
       "assistant": {
-        "final_text": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+        "final_text": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       }
     },
     {
       "index": 3,
       "latency": {
-        "voice_to_voice_ms": 641
+        "voice_to_voice_ms": 1356
       },
       "audio": {
-        "planned_ms": 4920,
-        "delivered_ms": 4920,
-        "played_ms": 4920
+        "planned_ms": 16760,
+        "delivered_ms": 16760,
+        "played_ms": 16760
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       },
       "assistant": {
-        "final_text": "I can only help with purchase-order status. If you have another purchase order code, I can look that up for you."
+        "final_text": "Let me check that. Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       }
     },
     {
       "index": 4,
       "latency": {
-        "voice_to_voice_ms": 769
+        "voice_to_voice_ms": 1520
       },
       "audio": {
-        "planned_ms": 15040,
-        "delivered_ms": 15040,
-        "played_ms": 15040
+        "planned_ms": 14960,
+        "delivered_ms": 14960,
+        "played_ms": 14960
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       },
       "assistant": {
-        "final_text": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+        "final_text": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       }
     },
     {
       "index": 5,
       "latency": {
-        "voice_to_voice_ms": 600
+        "voice_to_voice_ms": 1297
       },
       "audio": {
-        "planned_ms": 5080,
-        "delivered_ms": 5080,
-        "played_ms": 5080
+        "planned_ms": 15400,
+        "delivered_ms": 15400,
+        "played_ms": 15400
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       },
       "assistant": {
-        "final_text": "I can only help with purchase-order status. If you have another purchase order code, I can look that up for you."
-      }
-    },
-    {
-      "index": 6,
-      "latency": {
-        "voice_to_voice_ms": 648
-      },
-      "audio": {
-        "planned_ms": 15320,
-        "delivered_ms": 15320,
-        "played_ms": 15320
-      },
-      "assistant": {
-        "final_text": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+        "final_text": "Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six, and delivery is expected on September thirtieth, twenty twenty-six."
       }
     }
   ],
@@ -115,24 +117,24 @@
       "fh": {
         "id": "FH-05"
       },
-      "at_ms": 78805,
+      "at_ms": 91026,
       "turn": 2,
       "rotation": {
-        "audio_in_ms": 14752,
-        "audio_forwarded_ms": 14752,
-        "gap_ms": 2
+        "audio_in_ms": 15456,
+        "audio_forwarded_ms": 15456,
+        "gap_ms": 1
       }
     },
     {
       "fh": {
         "id": "FH-05"
       },
-      "at_ms": 147670,
+      "at_ms": 186992,
       "turn": 5,
       "rotation": {
-        "audio_in_ms": 5261,
-        "audio_forwarded_ms": 5261,
-        "gap_ms": 2
+        "audio_in_ms": 15968,
+        "audio_forwarded_ms": 15968,
+        "gap_ms": 1
       }
     }
   ]

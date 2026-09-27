@@ -13,6 +13,12 @@ describe('Sonic tool use adapter', () => {
     });
   });
 
+  it('constrains po_code to PO- and five digits, with no real code as an example', () => {
+    const schema = JSON.parse(getPoStatusToolSpec.toolSpec.inputSchema.json);
+    expect(schema.properties.po_code.pattern).toBe('^PO-[0-9]{5}$');
+    expect(getPoStatusToolSpec.toolSpec.inputSchema.json).not.toMatch(/\d{5}(?!\})/);
+  });
+
   it('maps toolUse content to a toolResult payload carrying the rendering', async () => {
     const payload = await toolUseToResult('{"po_code":"PO-20931"}');
     const result = JSON.parse(payload);

@@ -79,7 +79,7 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     if (message.type === 'turn') player.startTurn(message.index);
     if (message.type === 'flush') {
       flushCount++;
-      log(`FLUSH     heard ${player.flush()} ms of the turn`);
+      log(`FLUSH     heard ${player.flush(message.turn)} ms of the turn`);
     }
     if (message.type !== 'transcript') return;
     transcript.push({ role: message.role, text: message.text.trim() });

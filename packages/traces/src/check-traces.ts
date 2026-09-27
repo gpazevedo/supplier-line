@@ -19,7 +19,7 @@ function checkFile(path: string): Failure[] {
 
 const formatFailure = (f: Failure) => `  ${f.check} (${f.where}): ${f.message}`;
 
-/** Runs the five acceptance checks on every `.json` trace in the given directories. */
+/** Runs the acceptance checks on every `.json` trace in the given directories. */
 export function checkTraces(dirs: string[]): CheckResult {
   const files = dirs.filter(existsSync).flatMap((dir) =>
     readdirSync(dir)
