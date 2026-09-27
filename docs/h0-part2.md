@@ -12,7 +12,12 @@ AWS_PROFILE=admin AWS_REGION=us-east-1 pnpm exec cdk deploy PersistentStack --ex
 cd ../..
 ```
 
-`expiresAt` only lets the app stack in the same CDK app synth; it is not deployed. If the account already has an OIDC provider for `token.actions.githubusercontent.com`, the deploy fails with "already exists": delete the old provider, or tell the orchestrator.
+`expiresAt` only lets the app stack in the same CDK app synth; it is not deployed. The stack reuses the account's existing OIDC provider for `token.actions.githubusercontent.com` and does not create one. If the account has none, create it once first:
+
+```bash
+AWS_PROFILE=admin aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com --client-id-list sts.amazonaws.com
+```
 
 ## 2. Confirm the alert email
 

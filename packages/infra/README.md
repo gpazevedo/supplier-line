@@ -11,7 +11,7 @@ CDK app stack (S09): VPC (public subnets only, no NAT), Fargate ARM64 host, ALB 
 
 - ECR repo `supplier-line-host`; traces bucket `supplier-line-traces-<account-id>` (S3-encrypted, private, TLS only); SSM `/supplier-line/demo-access-code` holding a placeholder.
 - PO status Lambda bundled from `packages/tools/src/po-status/lambda.ts`; Lex V2 bot (en_US, `PoStatus` intent, `PoDigits` slot of five digits) fulfilled by it through the `live` alias; Connect instance with the bot associated and a flow whose error branch plays an error message.
-- GitHub OIDC provider and three roles, each trusted only for its Environment's `sub`. `demo`: push to ECR, CDK deploy and file-publishing roles. `infra`: the same two CDK roles. `teardown`: no CDK roles; describe and delete `supplier-line-app`, pass the CDK execution role to CloudFormation, scale ephemeral ECS services.
+- Three GitHub roles on the account's existing OIDC provider (referenced by ARN, not created), each trusted only for its Environment's `sub`. `demo`: push to ECR, CDK deploy and file-publishing roles. `infra`: the same two CDK roles. `teardown`: no CDK roles; describe and delete `supplier-line-app`, pass the CDK execution role to CloudFormation, scale ephemeral ECS services.
 - The reaper, and a monthly budget emailing at $10 and $30.
 
 Owner deploy steps: `docs/h0-part2.md`.

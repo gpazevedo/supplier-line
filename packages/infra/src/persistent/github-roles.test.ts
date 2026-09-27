@@ -30,7 +30,9 @@ beforeAll(() => {
 const trustOf = (role: Resource): Statement[] => role.Properties.AssumeRolePolicyDocument.Statement;
 
 const githubTrusted = () =>
-  Object.entries(roles).filter(([, role]) => JSON.stringify(trustOf(role)).includes('GithubOidc'));
+  Object.entries(roles).filter(([, role]) =>
+    JSON.stringify(trustOf(role)).includes(`:oidc-provider/${ISSUER}`)
+  );
 
 /** Every statement of the inline policies attached to the role with this logical ID prefix. */
 function policyOf(prefix: string): Statement[] {
@@ -45,10 +47,10 @@ const actionsOf = (statements: Statement[]) => statements.flatMap((s) => [s.Acti
 describe('GitHub OIDC trust', () => {
   it('trusts GitHub only through the three roles', () => {
     expect(githubTrusted()).toHaveLength(3);
-    template.hasResourceProperties('AWS::IAM::OIDCProvider', {
-      Url: `https://${ISSUER}`,
-      ClientIdList: ['sts.amazonaws.com'],
-    });
+  });
+
+  it("reuses the account's existing GitHub OIDC provider", () => {
+    template.resourceCountIs('AWS::IAM::OIDCProvider', 0);
   });
 
   it('pins each role to exactly one Environment sub: no branch, no wildcard', () => {

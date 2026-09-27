@@ -1,6 +1,7 @@
 import { Aws, Validations } from 'aws-cdk-lib';
 import type { IRepository } from 'aws-cdk-lib/aws-ecr';
 import {
+  type IOidcProvider,
   OidcProviderNative,
   PolicyStatement,
   Role,
@@ -46,7 +47,7 @@ function allowOnAppStack(role: Role, actions: string[]) {
 }
 
 /** A role only a job running in GitHub Environment `env` of this repo can assume. */
-function environmentRole(scope: Construct, provider: OidcProviderNative, env: GithubEnvironment) {
+function environmentRole(scope: Construct, provider: IOidcProvider, env: GithubEnvironment) {
   return new Role(scope, `Github${env[0].toUpperCase()}${env.slice(1)}Role`, {
     description: `GitHub Actions, Environment ${env} of ${GITHUB_REPO} only`,
     assumedBy: new WebIdentityPrincipal(provider.oidcProviderArn, {
@@ -101,14 +102,16 @@ function grantTeardown(role: Role) {
 }
 
 /**
- * GitHub OIDC provider and one role per GitHub Environment, each trusted only for that
- * Environment's `sub` claim, never a branch.
+ * One role per GitHub Environment, each trusted only for that Environment's `sub` claim,
+ * never a branch. The account's GitHub OIDC provider already exists (IAM allows one per URL),
+ * so it is referenced by ARN, not created.
  */
 export function createGithubRoles(scope: Construct, repository: IRepository): GithubRoles {
-  const provider = new OidcProviderNative(scope, 'GithubOidc', {
-    url: `https://${ISSUER}`,
-    clientIds: ['sts.amazonaws.com'],
-  });
+  const provider = OidcProviderNative.fromOidcProviderArn(
+    scope,
+    'GithubOidc',
+    `arn:${Aws.PARTITION}:iam::${Aws.ACCOUNT_ID}:oidc-provider/${ISSUER}`
+  );
   const roles = {
     demo: environmentRole(scope, provider, 'demo'),
     teardown: environmentRole(scope, provider, 'teardown'),
