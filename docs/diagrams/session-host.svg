@@ -72,7 +72,7 @@
 
   <rect class="ai" x="470" y="220" width="420" height="80" rx="8"/>
   <text class="t" x="486" y="244">Sonic session: the whole call</text>
-  <text x="486" y="264">only the current connection is heard; answers tool calls</text>
+  <text x="486" y="264">current connection is heard; holds early lookups</text>
   <text class="code" x="486" y="286">session.ts  prompt.ts  events.ts</text>
 
   <rect class="ai" x="470" y="320" width="200" height="140" rx="8"/>

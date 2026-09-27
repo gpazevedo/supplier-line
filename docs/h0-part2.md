@@ -25,7 +25,7 @@ Open "AWS Notification - Subscription Confirmation" and choose **Confirm subscri
 
 ## 3. Set the access code
 
-The stack creates `/supplier-line/demo-access-code` with a placeholder. Set the real code; `read -s` keeps it out of your shell history:
+The stack creates `/supplier-line/demo-access-code` with a placeholder. Set the real code, the same value as the repo secret `DEMO_ACCESS_CODE` (the live smoke job sends that secret to the deployed host). `read -s` keeps it out of your shell history:
 
 ```bash
 read -rs CODE && AWS_PROFILE=admin aws ssm put-parameter --region us-east-1 \

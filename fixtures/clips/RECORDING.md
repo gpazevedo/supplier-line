@@ -18,12 +18,12 @@ Record with a headset mic in a quiet room. Save every file in this folder, `fixt
 | File                    | Say                                                                       |
 | ----------------------- | ------------------------------------------------------------------------- |
 | `po-status-a.wav`       | "What's the status of purchase order P O one zero four eight two?"        |
-| `po-status-b.wav`       | "What's the status of purchase order P O dash two zero nine three one?"   |
+| `po-status-b.wav`       | "What's the status of purchase order P O two zero nine three one?"        |
 | `interrupt.wav`         | "Wait, stop."                                                             |
 | `followup-delivery.wav` | "And the delivery date?"                                                  |
 | `silence-3s.wav`        | Nothing: exactly 3 seconds of silence (generate it rather than record it) |
 
-- Read the PO codes digit by digit, exactly as written. They are PO-10482 and PO-20931.
+- Read the PO codes as "P O" then the digits one by one, without "dash", exactly as written. They are PO-10482 and PO-20931. The agent never says "dash", and Sonic mishears a paused "dash".
 - Record "Wait, stop." on its own. The clip player starts it a set delay after the agent begins speaking.
 - Speak at a normal pace and volume, as you would on a phone call.
 
@@ -36,12 +36,12 @@ The first take had two problems:
 
 Re-record all four speech clips in one sitting, so they share the same mic, room and level. Keep `silence-3s.wav`.
 
-| File                    | Priority    | Say                                                                     |
-| ----------------------- | ----------- | ----------------------------------------------------------------------- |
-| `po-status-b.wav`       | Required    | "What's the status of purchase order P O dash two zero nine three one?" |
-| `po-status-a.wav`       | Re-recorded | "What's the status of purchase order P O one zero four eight two?"      |
-| `interrupt.wav`         | Recommended | "Wait, stop."                                                           |
-| `followup-delivery.wav` | Recommended | "And the delivery date?"                                                |
+| File                    | Priority    | Say                                                                |
+| ----------------------- | ----------- | ------------------------------------------------------------------ |
+| `po-status-b.wav`       | Required    | "What's the status of purchase order P O two zero nine three one?" |
+| `po-status-a.wav`       | Re-recorded | "What's the status of purchase order P O one zero four eight two?" |
+| `interrupt.wav`         | Recommended | "Wait, stop."                                                      |
+| `followup-delivery.wav` | Recommended | "And the delivery date?"                                           |
 
 - Say the five digits at an even pace, with no pause longer than between ordinary words. A longer gap lets Sonic end your turn early.
 - Turn off fans, air conditioning and other noise sources. Keep the mic close to your mouth and lower its gain, rather than raising the gain and speaking softly.

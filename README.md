@@ -2,7 +2,7 @@
 
 An English-only voice agent that tells suppliers the status of a purchase order. It runs on Amazon Nova 2 Sonic (`amazon.nova-2-sonic-v1:0`) in AWS `us-east-1`, behind a browser softphone and an Amazon Connect front door.
 
-A caller says a code such as "P O dash one zero four eight two". The agent looks it up with the `get_po_status` tool and speaks the tool's rendering word for word. Any single wrong digit fails the code's check digit, so a misheard code gets "please say it again" instead of another order's data.
+A caller says a code such as "P O one zero four eight two". The agent looks it up with the `get_po_status` tool and speaks the tool's rendering word for word: status, amount, order date, and the date delivery is due (plus the new expected date when an order is delayed). Any single wrong digit fails the code's check digit, so a misheard code gets "please say it again" instead of another order's data.
 
 ![Architecture](docs/diagrams/architecture.svg)
 
@@ -19,7 +19,10 @@ A caller says a code such as "P O dash one zero four eight two". The agent looks
 | Failure behaviours (S14), Connect calling page (S18)                          | In progress |
 | Final review (S19), README and ADRs (S20)                                     | Planned     |
 
-Known issue: after a session rotation, Sonic often mishears a code read with a paused "P O dash" (clip A), though codes read as "P O" and digits (clip B) are heard correctly. The agent no longer says "dash", and the host holds any lookup the caller has not finished reading. The check digit turns each mishearing into "please say it again".
+Known issues:
+
+- After a session rotation, Sonic often mishears a code read with a paused "P O dash", though codes read as "P O" and digits are heard correctly. The agent no longer says "dash", and the host holds any lookup the caller has not finished reading. The check digit turns each mishearing into "please say it again".
+- Before H3: `demo-up`'s smoke job runs the trace checks on the committed fixtures only. The deployed host writes its traces to the traces bucket, so the live traces are not checked yet.
 
 ## Run it locally
 

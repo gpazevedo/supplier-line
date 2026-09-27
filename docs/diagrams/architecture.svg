@@ -107,9 +107,9 @@
   <text x="549" y="554">supplier-line-traces-</text>
   <text x="549" y="570">&lt;account-id&gt;</text>
   <rect class="aws" x="745" y="510" width="190" height="90" rx="8"/>
-  <text class="t" x="759" y="534">SSM parameter</text>
-  <text x="759" y="554">demo access code,</text>
-  <text x="759" y="570">set by hand</text>
+  <text class="t" x="759" y="534">SSM parameters</text>
+  <text x="759" y="554">access code (by hand),</text>
+  <text x="759" y="570">Connect instance, flow IDs</text>
   <rect class="aws" x="955" y="510" width="190" height="90" rx="8"/>
   <text class="t" x="969" y="534">Reaper Lambda</text>
   <text x="969" y="554">every 10 min; scales ECS</text>
@@ -167,7 +167,7 @@
   <path class="arrow" d="M650 380 V506"/>
   <text class="m" x="656" y="440">traces</text>
   <path class="arrow" d="M770 380 V506"/>
-  <text class="m" x="764" y="470" text-anchor="end">code check</text>
+  <text class="m" x="764" y="470" text-anchor="end">code, Connect IDs</text>
   <path class="arrow" d="M470 506 V450 H610 V384"/>
   <text class="m" x="480" y="444">image</text>
   <path class="darrow" d="M244 380 H285 V690 H321"/>

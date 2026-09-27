@@ -66,7 +66,7 @@ pre-commit install --hook-type pre-commit --hook-type pre-push
 
    Paste at the prompt instead of using `--body`, so the value stays out of your shell history. Store the code in your password manager.
 
-   Locally, the code comes from the `DEMO_ACCESS_CODE` environment variable. Never commit it. The SSM parameter created by the persistent stack is a separate copy: after the deploy in H0 part 2, set it by hand to the same code (or another one).
+   Locally, the code comes from the `DEMO_ACCESS_CODE` environment variable. Never commit it. The SSM parameter created by the persistent stack is a separate copy: after the deploy in H0 part 2, set it by hand to the same code. It must match, because the live smoke job in `demo-up` sends this secret to the deployed host, which checks it against SSM.
 
 ### 6. AWS
 
