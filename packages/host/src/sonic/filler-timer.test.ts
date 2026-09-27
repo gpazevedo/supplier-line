@@ -50,6 +50,19 @@ describe('FillerTimer (FH-03)', () => {
     expect(onFire).toHaveBeenCalledTimes(1);
   });
 
+  it('stop drops a pending timer and ignores every later caller call', () => {
+    const onFire = vi.fn();
+    const timer = new FillerTimer(STALL_MS, { onFire });
+    timer.caller(0);
+    timer.stop();
+    vi.advanceTimersByTime(STALL_MS * 2);
+    expect(onFire).not.toHaveBeenCalled();
+    // Stopped for good: a later caller call (e.g. from an event still draining out) is ignored.
+    timer.caller(0);
+    vi.advanceTimersByTime(STALL_MS * 2);
+    expect(onFire).not.toHaveBeenCalled();
+  });
+
   it('tracks each turn independently', () => {
     const onFire = vi.fn();
     const timer = new FillerTimer(STALL_MS, { onFire });

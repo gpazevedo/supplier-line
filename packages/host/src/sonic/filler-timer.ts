@@ -11,6 +11,7 @@ export interface FillerTimerHooks {
 export class FillerTimer {
   private timer?: NodeJS.Timeout;
   private firedFor = new Set<number>();
+  private stopped = false;
 
   constructor(
     private readonly stallMs: number,
@@ -19,6 +20,7 @@ export class FillerTimer {
 
   /** The caller finished speaking (or spoke again) in `turn`, with no answer yet. */
   caller(turn: number): void {
+    if (this.stopped) return;
     clearTimeout(this.timer);
     this.timer = undefined;
     if (this.firedFor.has(turn)) return;
@@ -29,6 +31,15 @@ export class FillerTimer {
   audio(): void {
     clearTimeout(this.timer);
     this.timer = undefined;
+  }
+
+  /**
+   * Stops the timer for good, so no later `caller` call (from an event still draining out of the
+   * closing connection) can schedule a filler that would fire after the session has ended.
+   */
+  stop(): void {
+    this.stopped = true;
+    this.audio();
   }
 
   private fire(turn: number): void {

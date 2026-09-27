@@ -150,6 +150,24 @@ describe('SonicSession failure behaviours', () => {
     session.close();
   });
 
+  it('FH-03: a pending filler timer never fires once the session has been closed', async () => {
+    const sc = scriptedClient();
+    const phrases = fakePhrases();
+    const { listener, audio } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases,
+      fillerStallMs: 30,
+      toolTimeoutMs: 10_000,
+    });
+    await sc.opened;
+
+    callerSaid('u1', 'po dash one oh four eight two').forEach(sc.emit);
+    session.close(); // the caller hung up before the stall window elapsed
+    await wait(80); // past what would have been the stall window
+
+    expect(audio.some((a) => a.pcm.equals(phrases['FH-03'].pcm))).toBe(false);
+  });
+
   it('FH-10: fillers, retries once, discards the stale first attempt, and sends one toolResult', async () => {
     const sc = scriptedClient();
     const phrases = fakePhrases();

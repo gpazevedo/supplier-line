@@ -118,6 +118,7 @@ export class SonicSession {
   /** Sends the closing sequence; `run` resolves once Sonic ends the stream. */
   close(): void {
     this.ending = true;
+    this.filler.stop(); // so a pending or later-scheduled FH-03 timer can't fire after close
     this.rotator.close();
   }
 
