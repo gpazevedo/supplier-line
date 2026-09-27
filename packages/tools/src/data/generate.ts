@@ -39,14 +39,21 @@ function poCode(body: string): string {
 function makePo(rand: () => number, code: string, status: PurchaseOrder['status']): PurchaseOrder {
   const orderMs = BASE_DATE + Math.floor(rand() * 60) * DAY_MS;
   const leadDays = 7 + Math.floor(rand() * 39);
+  const supplierId = suppliers[Math.floor(rand() * suppliers.length)].id;
+  const amountCents = 10_000 + Math.floor(rand() * 5_000_000);
+  const currency = CURRENCIES[Math.floor(rand() * CURRENCIES.length)];
+  const dueMs = orderMs + leadDays * DAY_MS;
+  const expectedDate =
+    status === 'delayed' ? isoDate(dueMs + (1 + Math.floor(rand() * 14)) * DAY_MS) : undefined;
   return {
     code,
-    supplierId: suppliers[Math.floor(rand() * suppliers.length)].id,
+    supplierId,
     status,
-    amountCents: 10_000 + Math.floor(rand() * 5_000_000),
-    currency: CURRENCIES[Math.floor(rand() * CURRENCIES.length)],
+    amountCents,
+    currency,
     orderDate: isoDate(orderMs),
-    deliveryDate: isoDate(orderMs + leadDays * DAY_MS),
+    dueDate: isoDate(dueMs),
+    ...(expectedDate ? { expectedDate } : {}),
   };
 }
 

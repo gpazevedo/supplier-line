@@ -12,40 +12,49 @@ describe('getPoStatus, recorded POs', () => {
         amountCents: 4521618,
         currency: 'EUR',
         orderDate: '2026-10-04',
-        deliveryDate: '2026-10-24',
+        dueDate: '2026-10-24',
       },
       rendering:
-        'Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. ' +
+        'Purchase order one zero four eight two from Summit Fasteners has shipped. ' +
         'The amount is forty-five thousand two hundred sixteen euros and eighteen cents. ' +
         'It was ordered on October fourth, twenty twenty-six, ' +
-        'and delivery is expected on October twenty-fourth, twenty twenty-six.',
+        'and delivery is due on October twenty-fourth, twenty twenty-six.',
     });
   });
 
   it('says when a delivered PO arrived and omits delivery for a cancelled one', async () => {
-    const delivered = await getPoStatus({ po_code: 'PO-80599' });
+    const delivered = await getPoStatus({ po_code: 'PO-89422' });
     expect(delivered.rendering).toBe(
-      'Purchase order P O dash eight zero five nine nine from Summit Fasteners was delivered. ' +
-        'The amount is nineteen thousand eight hundred ninety-three pounds and seventeen pence. ' +
-        'It was ordered on October sixteenth, twenty twenty-six, ' +
-        'and delivered on November twenty-sixth, twenty twenty-six.'
+      'Purchase order eight nine four two two from Summit Fasteners was delivered. ' +
+        'The amount is thirty-six thousand one hundred twelve dollars and six cents. ' +
+        'It was ordered on October twenty-fifth, twenty twenty-six, ' +
+        'and delivered on November sixteenth, twenty twenty-six.'
     );
-    const cancelled = await getPoStatus({ po_code: 'PO-72022' });
+    const cancelled = await getPoStatus({ po_code: 'PO-77946' });
     expect(cancelled.rendering).toBe(
-      'Purchase order P O dash seven two zero two two from Kestrel Industrial Supply was cancelled. ' +
-        'The amount is thirty-two thousand two hundred ninety-three pounds and ninety-four pence. ' +
-        'It was ordered on September seventeenth, twenty twenty-six.'
+      'Purchase order seven seven nine four six from Summit Fasteners was cancelled. ' +
+        'The amount is five thousand six hundred forty-three euros and sixty-three cents. ' +
+        'It was ordered on October thirteenth, twenty twenty-six.'
     );
   });
 
   it('returns the delayed PO and its spoken rendering', async () => {
     const result = await getPoStatus({ po_code: 'PO-20931' });
-    expect(result).toMatchObject({ ok: true, po: { code: 'PO-20931', status: 'delayed' } });
+    expect(result).toMatchObject({
+      ok: true,
+      po: {
+        code: 'PO-20931',
+        status: 'delayed',
+        dueDate: '2026-09-30',
+        expectedDate: '2026-10-04',
+      },
+    });
     expect(result.rendering).toBe(
-      'Purchase order P O dash two zero nine three one from Summit Fasteners is delayed. ' +
+      'Purchase order two zero nine three one from Summit Fasteners is delayed. ' +
         'The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. ' +
-        'It was ordered on September fifteenth, twenty twenty-six, ' +
-        'and delivery is expected on September thirtieth, twenty twenty-six.'
+        'It was ordered on September fifteenth, twenty twenty-six. ' +
+        'Delivery was due on September thirtieth, twenty twenty-six ' +
+        'and is now expected on October fourth, twenty twenty-six.'
     );
   });
 });
@@ -84,7 +93,7 @@ describe('getPoStatus, reason codes', () => {
       ok: false,
       reason: 'check_digit_failed',
       rendering:
-        "Sorry, P O dash one zero four eight three doesn't look like a valid purchase order code. " +
+        "Sorry, purchase order one zero four eight three doesn't look like a valid purchase order code. " +
         'Could you say it again, one digit at a time?',
     });
   });
@@ -94,7 +103,7 @@ describe('getPoStatus, reason codes', () => {
       ok: false,
       reason: 'not_found',
       rendering:
-        "Sorry, I couldn't find purchase order P O dash zero zero zero zero three. " +
+        "Sorry, I couldn't find purchase order zero zero zero zero three. " +
         'Could you check the number and say it again?',
     });
   });
