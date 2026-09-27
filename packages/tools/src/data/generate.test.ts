@@ -48,8 +48,21 @@ describe('every generated PO', () => {
       expect(() => renderPoCode(po.code)).not.toThrow();
       expect(() => renderMoney(po.amountCents, po.currency)).not.toThrow();
       expect(() => renderDate(po.orderDate)).not.toThrow();
-      expect(() => renderDate(po.deliveryDate)).not.toThrow();
-      expect(po.deliveryDate > po.orderDate).toBe(true);
+      expect(() => renderDate(po.dueDate)).not.toThrow();
+      expect(po.dueDate > po.orderDate).toBe(true);
+    }
+  });
+
+  it('gives every delayed PO an expected date later than its due date, and no other status one', () => {
+    for (const po of purchaseOrders) {
+      if (po.status === 'delayed') {
+        const { expectedDate } = po;
+        if (!expectedDate) throw new Error(`delayed PO ${po.code} has no expectedDate`);
+        expect(() => renderDate(expectedDate)).not.toThrow();
+        expect(expectedDate > po.dueDate).toBe(true);
+      } else {
+        expect(po.expectedDate).toBeUndefined();
+      }
     }
   });
 });

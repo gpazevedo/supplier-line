@@ -17,7 +17,10 @@ export interface PurchaseOrder {
   currency: string;
   /** ISO dates, `YYYY-MM-DD`. */
   orderDate: string;
-  deliveryDate: string;
+  /** The date the supplier is required to deliver. */
+  dueDate: string;
+  /** Present only when `status` is `delayed`; always later than `dueDate`. */
+  expectedDate?: string;
 }
 
 export interface GeneratedData {

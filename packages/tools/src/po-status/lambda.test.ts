@@ -72,7 +72,7 @@ describe('Lex V2 fulfillment Lambda', () => {
       'Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. ' +
         'The amount is forty-five thousand two hundred sixteen euros and eighteen cents. ' +
         'It was ordered on October fourth, twenty twenty-six, ' +
-        'and delivery is expected on October twenty-fourth, twenty twenty-six.'
+        'and delivery is due on October twenty-fourth, twenty twenty-six.'
     );
   });
 

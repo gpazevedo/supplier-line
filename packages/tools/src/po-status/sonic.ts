@@ -25,7 +25,8 @@ export const getPoStatusToolSpec = {
   toolSpec: {
     name: 'get_po_status',
     description:
-      'Look up a purchase order by its code and return its status, amount and dates, ' +
+      'Look up a purchase order by its code and return its status, amount, order date, ' +
+      'due date (the date the supplier must deliver by), and, when delayed, the new expected date, ' +
       'plus the exact sentence to speak to the caller. Call it only once the caller has said ' +
       'all five digits of the code.',
     inputSchema: { json: JSON.stringify(inputSchema) },

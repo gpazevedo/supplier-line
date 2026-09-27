@@ -13,12 +13,23 @@ const STATUS_PHRASE: Record<PoStatus, string> = {
   cancelled: 'was cancelled',
 };
 
-/** Delivery clause, or none when the PO was cancelled. */
-function deliveryClause(po: PoView): string {
-  const date = renderDate(po.deliveryDate);
-  if (po.status === 'cancelled') return '';
-  if (po.status === 'delivered') return `, and delivered on ${date}`;
-  return `, and delivery is expected on ${date}`;
+/** Delivery sentence(s) following "It was ordered on <date>", including the closing period. */
+function deliverySentence(po: PoView): string {
+  const due = renderDate(po.dueDate);
+  switch (po.status) {
+    case 'cancelled':
+      return '.';
+    case 'delivered':
+      return `, and delivered on ${due}.`;
+    case 'delayed': {
+      const { expectedDate } = po;
+      if (!expectedDate) throw new RangeError(`delayed PO ${po.code} has no expectedDate`);
+      return `. Delivery was due on ${due} and is now expected on ${renderDate(expectedDate)}.`;
+    }
+    case 'open':
+    case 'shipped':
+      return `, and delivery is due on ${due}.`;
+  }
 }
 
 /** The exact en-US sentence the agent speaks for a found PO. */
@@ -26,7 +37,7 @@ export function renderPo(po: PoView): string {
   return (
     `Purchase order ${renderPoCode(po.code)} from ${po.supplier} ${STATUS_PHRASE[po.status]}. ` +
     `The amount is ${renderMoney(po.amountCents, po.currency)}. ` +
-    `It was ordered on ${renderDate(po.orderDate)}${deliveryClause(po)}.`
+    `It was ordered on ${renderDate(po.orderDate)}${deliverySentence(po)}`
   );
 }
 
