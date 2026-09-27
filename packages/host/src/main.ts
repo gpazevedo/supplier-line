@@ -11,6 +11,7 @@ const rotation = {
   thresholdMs: Number(process.env.ROTATE_AFTER_S ?? 360) * 1000,
   bufferMs: 3000,
   audioStartTimeoutMs: 20_000,
+  handoverTimeoutMs: 30_000,
 };
 
 const server = createHostServer();

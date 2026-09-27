@@ -25,6 +25,9 @@ export interface RotatorOptions {
   bufferMs: number;
   /** How long to wait for the agent to speak before rotating anyway. */
   audioStartTimeoutMs: number;
+  /** How long to wait for the response to complete before handing over anyway; under Sonic's
+   * ~55 s idle limit. */
+  handoverTimeoutMs: number;
 }
 
 /**
@@ -52,7 +55,9 @@ const msOf = (chunks: Chunk[]) =>
  * Rotates Sonic connections before their 8-minute limit, porting AWS's Python session-continuation
  * pattern: past the threshold, once the agent starts speaking (or after a timeout), open the next
  * connection and record caller audio; when the response completes, replay the history and the
- * last `bufferMs` of caller audio into it, make it current and close the old one.
+ * last `bufferMs` of caller audio into it, make it current and close the old one. If the response
+ * has not completed within `handoverTimeoutMs`, hand over anyway rather than let the idle next
+ * connection time out.
  */
 export class Rotator<C extends RotatingConnection> {
   private state: State = 'live';
@@ -113,9 +118,18 @@ export class Rotator<C extends RotatingConnection> {
     this.window = [];
     this.next = this.hooks.open();
     if (this.tracker.idle) void this.handOver();
+    else this.timer = setTimeout(() => this.forceHandOver(), this.options.handoverTimeoutMs);
+  }
+
+  private forceHandOver(): void {
+    console.warn(
+      `rotation: response incomplete after ${this.options.handoverTimeoutMs} ms, handing over anyway`
+    );
+    void this.handOver();
   }
 
   private async handOver(): Promise<void> {
+    clearTimeout(this.timer);
     const next = this.next as C;
     this.state = 'handing-over';
     const completedAt = Date.now();
