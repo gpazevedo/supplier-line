@@ -7,17 +7,19 @@ Session host: `GET /health`, `POST /api/connect/start`, and Nova 2 Sonic session
 
 ```bash
 DEMO_ACCESS_CODE=let-me-in AWS_PROFILE=supplier-dev pnpm --filter host dev   # listens on :8080
-pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482
-pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 --interrupt-after 2000
+DEMO_ACCESS_CODE=let-me-in pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482
+DEMO_ACCESS_CODE=let-me-in pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 --interrupt-after 2000
 ROTATE_AFTER_S=60 DEMO_ACCESS_CODE=let-me-in AWS_PROFILE=supplier-dev pnpm --filter host dev   # rotate every minute
-pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 --loop 180
+pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 --loop 180 --code let-me-in
 ```
 
-`DEMO_ACCESS_CODE` is required; the host refuses to start without it. `replay` and
-`replay-clips` (the caller-clip player) don't need it, but a wrong or missing `code` query
-parameter on `/ws` is rejected before any Bedrock call: set `DEMO_ACCESS_CODE` in the environment
-and pass it to `runClip`'s `accessCode` option to exercise the real check end to end (see
-`replay-clips.ts`).
+`DEMO_ACCESS_CODE` is required for the host; it refuses to start without it. `replay` and
+`replay-clips` (the caller-clip player) both need the _same_ code to get past the host's access
+check on `/ws` (S17): `replay` reads `DEMO_ACCESS_CODE` from the environment, or takes `--code`
+explicitly; `replay-clips` always reads it from the environment (see `replay-clips.ts`). A wrong or
+missing code, or the 2-session cap, makes the host reject the connection and close it; both the
+`runClip` helper they share and the `replay` CLI report that and exit non-zero within a couple of
+seconds, rather than waiting out the no-answer timeout.
 
 The replay streams the clip in real time, plays the agent audio on a wall clock, waits for the answer to finish playing, then prints the transcript beside the expected rendering. `--interrupt-after <ms>` sends `fixtures/clips/interrupt.wav` that long after the answer starts; `--loop <s>` alternates the clip with `followup-delivery.wav` for that long, each once the previous answer has played and gone quiet for 8 s (`--url` picks another host). Each session writes `traces/<session-id>.json` (set `TRACE_DIR` to change it); the replay also saves the agent audio beside it as `.agent.wav`.
 
