@@ -49,6 +49,7 @@ describe('grounded PO data', () => {
   it.each([
     'The amount is forty-five thousand two hundred sixteen euros and eighteen cents.',
     'Purchase order P O dash one zero four eight two from Summit Fasteners has shipped.',
+    'Purchase order one zero four eight two from Summit Fasteners.',
     'It was ordered on October fourth, twenty twenty-six.',
   ])('fails a turn with no tool result that says "%s"', (text) => {
     const trace = load(samplesDir, 'softphone-happy.json');
@@ -60,6 +61,7 @@ describe('grounded PO data', () => {
   it.each([
     'Sorry, I need all five digits of the purchase order code to check the status.',
     "Sorry, I couldn't find purchase order P O dash one two three four five.",
+    "Sorry, I couldn't find purchase order one two three four five. Could you check the number?",
     'Sure. What do you need?',
   ])('passes a turn with no tool result that says "%s"', (text) => {
     const trace = load(samplesDir, 'softphone-happy.json');

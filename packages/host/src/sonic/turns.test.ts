@@ -133,3 +133,20 @@ it('replays a turn answered from a tool result without the agent reply', () => {
     { role: 'ASSISTANT', text: 'You are welcome.' },
   ]);
 });
+
+it('exposes the current caller text and counts tool calls made while the caller was still reading', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of P O');
+  textBlock(r, 'u2', 'USER', FINAL, 10)('dash one zero four');
+  expect(r.callerText()).toBe('Status of P O dash one zero four');
+  r.onEarlyToolCall();
+  textBlock(r, 'u3', 'USER', FINAL, 20)('eight two');
+  r.onToolResult('get_po_status', 'Purchase order one zero four eight two.');
+  textBlock(r, 'a1', 'ASSISTANT', FINAL, 30)('Purchase order one zero four eight two.');
+
+  expect(r.turns()[0]).toMatchObject({
+    tool: { name: 'get_po_status', rendering: 'Purchase order one zero four eight two.' },
+    early_tool_calls: 1,
+  });
+  expect(r.turns()[0]).not.toHaveProperty('tool.early_calls');
+});

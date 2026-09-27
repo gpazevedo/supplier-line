@@ -1,11 +1,16 @@
 import { randomUUID } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { NodeHttp2Handler } from '@smithy/node-http-handler';
 import type { Trace } from 'traces/src/index.js';
 import { SonicConnection } from './connection.js';
 import { Rotator, type RotationStats, type RotatorOptions } from './rotator.js';
 import { CONTINUED_PROMPT, SYSTEM_PROMPT } from './prompt.js';
+import { callerStillReading } from './reading.js';
 import { isInterruption, TurnRecorder } from './turns.js';
+
+/** Longest a lookup is held while the caller finishes reading the code. */
+const READING_TIMEOUT_MS = 4000;
 
 /** Bedrock client for `us-east-1` over HTTP/2, which the bidirectional stream requires. */
 export function createSonicClient(): BedrockRuntimeClient {
@@ -111,6 +116,7 @@ export class SonicSession {
           this.recorder.onToolResult(name, rendering);
           this.rotator.onToolResult(from, rendering);
         },
+        callerStillReading: (from) => this.callerStillReading(from),
       },
       systemPrompt
     );
@@ -119,6 +125,17 @@ export class SonicSession {
       (error: unknown) => this.onEnded(connection, error)
     );
     return connection;
+  }
+
+  private async callerStillReading(from: SonicConnection): Promise<boolean> {
+    if (from !== this.rotator.current) return false;
+    const text = () => this.recorder.callerText();
+    const reading = await callerStillReading(text, READING_TIMEOUT_MS, sleep);
+    if (reading) {
+      this.recorder.onEarlyToolCall();
+      this.log(`toolUse held: caller still reading ${JSON.stringify(text())}`);
+    }
+    return reading;
   }
 
   private onEnded(connection: SonicConnection, error?: unknown): void {

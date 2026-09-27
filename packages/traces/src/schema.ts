@@ -17,6 +17,8 @@ const turnSchema = z.object({
   bargein: z.object({ at_ms: ms }).optional(),
   filler: z.object({ played: z.boolean() }).optional(),
   tool: z.object({ name: z.string(), rendering: z.string() }).optional(),
+  // Lookups refused because the caller was still reading the code.
+  early_tool_calls: z.number().int().positive().optional(),
   assistant: z.object({ final_text: z.string() }),
 });
 
