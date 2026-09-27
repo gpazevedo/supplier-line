@@ -121,7 +121,7 @@ GitHub's scheduled workflows can run late, and are switched off after long inact
 - en-US spoken renderings for money, dates and PO codes
 - Three failure behaviours: FH-01 (stream won't open), FH-03 (stall), FH-10 (tool timeout)
 - Session rotation before Sonic's 8-minute connection limit (FH-05), so calls can last up to 15 minutes
-- Traces written to S3, a viewer, and five trace checks run in GitHub Actions
+- Traces written to S3, a viewer, and six trace checks run in GitHub Actions
 - A caller-clip player for repeatable fixture sessions, locally and against the deployed app
 - Connect: instance, Lex bot with Sonic speech-to-speech on en-US, a PO intent calling the Lambda, a flow with an error branch, and a browser-calling page
 - The consent controls above: approval-gated workflows, the reaper, alerts and budgets
@@ -245,7 +245,7 @@ S12, S13 and S22 run one after the other, not in parallel, because all three cha
 | S19  | 4     | Final review                 | Review across security, IAM least privilege, the consent controls, WCAG 2.2 AA (automated check plus a manual keyboard and screen-reader pass), correctness and readability                                                                                                                                                                                                                                                                  | Blocking findings fixed; `cdk-nag` clean                                                                                                         | `code-review-and-quality`                 | Opus 5.5  |
 | S20  | 5     | README and ADRs              | Architecture, consent controls, built-versus-designed lists, cost notes, and short ADRs (English-only, model-detected barge-in, two stacks, consent-gated deploys, access code over Cognito)                                                                                                                                                                                                                                                 | Every claim matches code, a workflow run, or a committed trace                                                                                   | `code-review-and-quality`                 | Sonnet 5  |
 
-**At H3,** you approve `demo-up` for 1 hour. Its live smoke job replays the clip scenarios against the deployed app and runs the five checks. The orchestrator then commits those traces as fixtures, so `ci.yml` checks real deployed behaviour from then on. The reaper removes the app stack when the window ends.
+**At H3,** you approve `demo-up` for 1 hour. Its live smoke job replays the clip scenarios against the deployed app and runs the six trace checks. The orchestrator then commits those traces as fixtures, so `ci.yml` checks real deployed behaviour from then on. The reaper removes the app stack when the window ends.
 
 ## Model policy
 
