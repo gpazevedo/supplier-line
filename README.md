@@ -19,7 +19,7 @@ A caller says a code such as "P O dash one zero four eight two". The agent looks
 | Failure behaviours (S14), Connect calling page (S18)                          | In progress |
 | Final review (S19), README and ADRs (S20)                                     | Planned     |
 
-Known issue: Sonic sometimes mishears a paused "P O dash" when it is not the first thing said in a call, most often after a session rotation. The check digit turns each mishearing into "please say it again". A fix is in progress.
+Known issue: after a session rotation, Sonic often mishears a code read with a paused "P O dash" (clip A), though codes read as "P O" and digits (clip B) are heard correctly. The agent no longer says "dash", and the host holds any lookup the caller has not finished reading. The check digit turns each mishearing into "please say it again".
 
 ## Run it locally
 
