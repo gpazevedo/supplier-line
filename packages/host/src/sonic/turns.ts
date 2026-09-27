@@ -1,4 +1,5 @@
 import type { Trace } from 'traces/src/index.js';
+import { heardText, type HistoryMessage } from './history.js';
 import { PlaybackLedger } from './ledger.js';
 
 type TraceTurn = Trace['turns'][number];
@@ -13,12 +14,13 @@ interface OpenTurn {
   callerAt: number;
   firstAudioAt?: number;
   tool?: { name: string; rendering: string };
+  caller: string[];
   spoken: string[];
 }
 
 type Body = Record<string, unknown>;
 
-const isInterruption = (text: string) => /"interrupted"\s*:\s*true/.test(text);
+export const isInterruption = (text: string) => /"interrupted"\s*:\s*true/.test(text);
 
 /**
  * Folds Sonic output events into trace turns. A turn starts with the caller's transcript;
@@ -61,6 +63,19 @@ export class TurnRecorder {
     }));
   }
 
+  /** Caller and agent text per turn; a barged-in answer keeps only what the caller heard. */
+  history(): HistoryMessage[] {
+    return this.open.flatMap((turn) => {
+      const spoken = turn.spoken.join(' ');
+      const heardMs = this.ledger.heardMs(turn.index);
+      const messages: HistoryMessage[] = [
+        { role: 'USER', text: turn.caller.join(' ') },
+        { role: 'ASSISTANT', text: heardMs === undefined ? spoken : heardText(spoken, heardMs) },
+      ];
+      return messages.filter((message) => message.text);
+    });
+  }
+
   private get current(): OpenTurn | undefined {
     return this.open.at(-1);
   }
@@ -82,8 +97,9 @@ export class TurnRecorder {
     }
     if (!block?.final || isInterruption(text)) return;
     if (block.role === 'USER' && this.answered())
-      this.open.push({ index: this.open.length, callerAt: atMs, spoken: [] });
+      this.open.push({ index: this.open.length, callerAt: atMs, caller: [], spoken: [] });
     else if (block.role === 'USER' && this.current) this.current.callerAt = atMs;
+    if (block.role === 'USER') this.current?.caller.push(text.trim());
     if (block.role === 'ASSISTANT' && this.current) this.current.spoken.push(text.trim());
   }
 

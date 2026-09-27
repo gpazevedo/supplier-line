@@ -87,6 +87,27 @@ it('fills the playback ledger: speculative text, agent audio, interruption and c
   });
 });
 
+it('builds history from caller text and heard agent text, cutting barged-in turns', () => {
+  const r = new TurnRecorder();
+  const oneSecond = Buffer.alloc(48_000).toString('base64');
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of');
+  textBlock(r, 'u2', 'USER', FINAL, 10)('PO-10482?');
+  r.onEvent('audioOutput', { contentId: 'x1', content: oneSecond }, 20);
+  textBlock(r, 'a1', 'ASSISTANT', FINAL, 30)('Purchase order P O dash one zero.');
+  r.ledger.played(0, 1100);
+  r.onEvent('contentEnd', { contentId: 'm1', type: 'TEXT', stopReason: 'INTERRUPTED' }, 40);
+  textBlock(r, 'a2', 'ASSISTANT', FINAL, 50)('{ "interrupted" : true }');
+  textBlock(r, 'u3', 'USER', FINAL, 60)('And the delivery date?');
+  textBlock(r, 'a3', 'ASSISTANT', FINAL, 70)('October twenty-fourth.');
+
+  expect(r.history()).toEqual([
+    { role: 'USER', text: 'Status of PO-10482?' },
+    { role: 'ASSISTANT', text: 'Purchase order P O' },
+    { role: 'USER', text: 'And the delivery date?' },
+    { role: 'ASSISTANT', text: 'October twenty-fourth.' },
+  ]);
+});
+
 it('times latency from the last caller segment before the agent answers', () => {
   const r = new TurnRecorder();
   textBlock(r, 'u1', 'USER', FINAL, 5000)('What is the status of');

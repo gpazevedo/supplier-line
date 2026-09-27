@@ -4,10 +4,12 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
   private ended = false;
   private wake?: () => void;
 
-  push(item: T): void {
-    if (this.ended) return;
+  /** Queues `item`; false once the queue has ended. */
+  push(item: T): boolean {
+    if (this.ended) return false;
     this.items.push(item);
     this.wake?.();
+    return true;
   }
 
   end(): void {

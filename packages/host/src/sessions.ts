@@ -2,6 +2,7 @@ import type { Server } from 'node:http';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import type { TraceWriter } from 'traces/src/index.js';
 import { WebSocketServer, type WebSocket } from 'ws';
+import type { RotatorOptions } from './sonic/rotator.js';
 import { SonicSession } from './sonic/session.js';
 
 /**
@@ -26,6 +27,7 @@ export type ClientMessage =
 export interface SessionDeps {
   client: BedrockRuntimeClient;
   writer: TraceWriter;
+  rotation: RotatorOptions;
 }
 
 /**
@@ -38,18 +40,22 @@ export function attachSessions(server: Server, deps: SessionDeps): void {
   wss.on('connection', (socket) => void serve(socket, deps));
 }
 
-async function serve(socket: WebSocket, { client, writer }: SessionDeps): Promise<void> {
+async function serve(socket: WebSocket, { client, writer, rotation }: SessionDeps): Promise<void> {
   const send = (message: HostMessage) => socket.send(JSON.stringify(message));
   let audioTurn: number | undefined;
-  const session = new SonicSession(client, {
-    onAudio: (pcm, turn) => {
-      if (turn !== undefined && turn !== audioTurn) send({ type: 'turn', index: turn });
-      audioTurn = turn;
-      socket.send(pcm);
+  const session = new SonicSession(
+    client,
+    {
+      onAudio: (pcm, turn) => {
+        if (turn !== undefined && turn !== audioTurn) send({ type: 'turn', index: turn });
+        audioTurn = turn;
+        socket.send(pcm);
+      },
+      onInterrupted: () => send({ type: 'flush' }),
+      onTranscript: (role, text) => send({ type: 'transcript', role, text }),
     },
-    onInterrupted: () => send({ type: 'flush' }),
-    onTranscript: (role, text) => send({ type: 'transcript', role, text }),
-  });
+    rotation
+  );
   socket.on('message', (data, isBinary) => {
     if (isBinary) return session.sendAudio(data as Buffer);
     const message = JSON.parse(String(data)) as ClientMessage;

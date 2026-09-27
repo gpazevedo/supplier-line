@@ -1,0 +1,139 @@
+{
+  "session_id": "ce574e38-aec5-4b55-9b9b-23f4b03169e6",
+  "front_door": "softphone",
+  "started_at": "2026-09-27T04:46:05.339Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 535
+      },
+      "audio": {
+        "planned_ms": 16200,
+        "delivered_ms": 16200,
+        "played_ms": 16200
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Go on Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 1,
+      "latency": {
+        "voice_to_voice_ms": 825
+      },
+      "audio": {
+        "planned_ms": 5280,
+        "delivered_ms": 5280,
+        "played_ms": 5280
+      },
+      "assistant": {
+        "final_text": "I can only help with purchase-order status. If you have another purchase order code, I can look that up for you."
+      }
+    },
+    {
+      "index": 2,
+      "latency": {
+        "voice_to_voice_ms": 672
+      },
+      "audio": {
+        "planned_ms": 14120,
+        "delivered_ms": 14120,
+        "played_ms": 14120
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 3,
+      "latency": {
+        "voice_to_voice_ms": 641
+      },
+      "audio": {
+        "planned_ms": 4920,
+        "delivered_ms": 4920,
+        "played_ms": 4920
+      },
+      "assistant": {
+        "final_text": "I can only help with purchase-order status. If you have another purchase order code, I can look that up for you."
+      }
+    },
+    {
+      "index": 4,
+      "latency": {
+        "voice_to_voice_ms": 769
+      },
+      "audio": {
+        "planned_ms": 15040,
+        "delivered_ms": 15040,
+        "played_ms": 15040
+      },
+      "assistant": {
+        "final_text": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 5,
+      "latency": {
+        "voice_to_voice_ms": 600
+      },
+      "audio": {
+        "planned_ms": 5080,
+        "delivered_ms": 5080,
+        "played_ms": 5080
+      },
+      "assistant": {
+        "final_text": "I can only help with purchase-order status. If you have another purchase order code, I can look that up for you."
+      }
+    },
+    {
+      "index": 6,
+      "latency": {
+        "voice_to_voice_ms": 648
+      },
+      "audio": {
+        "planned_ms": 15320,
+        "delivered_ms": 15320,
+        "played_ms": 15320
+      },
+      "assistant": {
+        "final_text": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      }
+    }
+  ],
+  "events": [
+    {
+      "fh": {
+        "id": "FH-05"
+      },
+      "at_ms": 78805,
+      "turn": 2,
+      "rotation": {
+        "audio_in_ms": 14752,
+        "audio_forwarded_ms": 14752,
+        "gap_ms": 2
+      }
+    },
+    {
+      "fh": {
+        "id": "FH-05"
+      },
+      "at_ms": 147670,
+      "turn": 5,
+      "rotation": {
+        "audio_in_ms": 5261,
+        "audio_forwarded_ms": 5261,
+        "gap_ms": 2
+      }
+    }
+  ]
+}

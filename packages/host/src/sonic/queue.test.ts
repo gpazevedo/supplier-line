@@ -22,3 +22,10 @@ it('ignores pushes after end', async () => {
   queue.push(1);
   expect(await drain(queue)).toEqual([]);
 });
+
+it('push reports whether the queue accepted the item', () => {
+  const queue = new AsyncQueue<number>();
+  expect(queue.push(1)).toBe(true);
+  queue.end();
+  expect(queue.push(2)).toBe(false);
+});
