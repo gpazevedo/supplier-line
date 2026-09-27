@@ -1,0 +1,44 @@
+{
+  "session_id": "e2b76901-feb7-4462-b3b9-38fc0e2108ac",
+  "front_door": "softphone",
+  "started_at": "2026-09-27T04:07:28.266Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 532
+      },
+      "audio": {
+        "planned_ms": 16480,
+        "delivered_ms": 16480,
+        "played_ms": 6975,
+        "flush_latency_ms": 2
+      },
+      "bargein": {
+        "at_ms": 6952
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order P O dash one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is expected on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Go on Purchase order P O dash one zero four eight two from Summit Fasteners has shipped."
+      }
+    },
+    {
+      "index": 1,
+      "latency": {
+        "voice_to_voice_ms": 445
+      },
+      "audio": {
+        "planned_ms": 5600,
+        "delivered_ms": 5600,
+        "played_ms": 5600
+      },
+      "assistant": {
+        "final_text": "Sorry, I can't stop mid-response. Let me know if you have another purchase order to check or if you need anything else."
+      }
+    }
+  ],
+  "events": []
+}

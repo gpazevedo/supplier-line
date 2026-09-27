@@ -27,6 +27,7 @@ it('builds one turn from caller transcript, tool result, audio and final text', 
     {
       index: 0,
       latency: { voice_to_voice_ms: 800 },
+      audio: { planned_ms: 0, delivered_ms: 0, played_ms: 0 },
       tool: { name: 'get_po_status', rendering: 'Purchase order P O dash one.' },
       assistant: { final_text: 'Purchase order P O dash one.' },
     },
@@ -65,4 +66,32 @@ it('records no turns before the caller speaks', () => {
   const r = new TurnRecorder();
   textBlock(r, 'a1', 'ASSISTANT', FINAL, 10)('Welcome.');
   expect(r.turns()).toEqual([]);
+});
+
+it('fills the playback ledger: speculative text, agent audio, interruption and client reports', () => {
+  const r = new TurnRecorder();
+  const oneSecond = Buffer.alloc(48_000).toString('base64');
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of PO-10482?');
+  textBlock(r, 'a1', 'ASSISTANT', SPECULATIVE, 900)('Purchase order.');
+  r.onEvent('contentStart', { contentId: 'x1', type: 'AUDIO', role: 'ASSISTANT' }, 1000);
+  r.onEvent('audioOutput', { contentId: 'x1', content: oneSecond }, 1000);
+  r.onEvent('audioOutput', { contentId: 'x1', content: oneSecond }, 1100);
+  expect(r.currentTurn).toBe(0);
+  r.ledger.played(0, 600);
+  r.onEvent('contentEnd', { contentId: 'm1', type: 'TEXT', stopReason: 'INTERRUPTED' }, 1700);
+  r.ledger.flushed(0, 650, 1760);
+
+  expect(r.turns()[0]).toMatchObject({
+    audio: { planned_ms: 2000, delivered_ms: 2000, played_ms: 650, flush_latency_ms: 60 },
+    bargein: { at_ms: 600 },
+  });
+});
+
+it('times latency from the last caller segment before the agent answers', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 5000)('What is the status of');
+  textBlock(r, 'u2', 'USER', FINAL, 9300)('PO-10482?');
+  r.onEvent('audioOutput', { contentId: 'x1', content: 'AAAA' }, 9800);
+  expect(r.turns()).toHaveLength(1);
+  expect(r.turns()[0].latency.voice_to_voice_ms).toBe(500);
 });

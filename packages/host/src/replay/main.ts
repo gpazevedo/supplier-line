@@ -1,41 +1,63 @@
 /**
- * Minimal replay: streams one caller clip in real time to the host's `/ws`, keeps sending silence
- * until the agent's answer has finished playing, then prints the transcript beside the expected
- * rendering. Usage: `pnpm --filter host replay <clip.wav> [PO-code] [ws-url]`.
+ * Minimal replay: streams one caller clip in real time to the host's `/ws`, plays the agent audio
+ * on a wall clock that reports what played and honours `flush`, keeps sending silence until the
+ * answer has finished playing, then prints the transcript beside the expected rendering. With
+ * `--interrupt-after <ms>` it sends `fixtures/clips/interrupt.wav` that long into the answer.
+ * Usage: `pnpm --filter host replay <clip.wav> [PO-code] [--interrupt-after ms] [--url ws-url]`.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
+import { parseArgs } from 'node:util';
 import { getPoStatus } from 'tools/src/po-status/index.js';
 import { WebSocket } from 'ws';
 import type { HostMessage } from '../sessions.js';
 import { INPUT_RATE, OUTPUT_RATE } from '../sonic/events.js';
-import { PlaybackClock } from './playback-clock.js';
+import { ReplayPlayer } from './player.js';
 import { pcmFromWav, wavFromPcm } from './wav.js';
 
 const FRAME_MS = 32;
 const FRAME_BYTES = (INPUT_RATE / 1000) * FRAME_MS * 2;
 const QUIET_AFTER_MS = 4000;
 const MAX_MS = 90_000;
+const INTERRUPT_CLIP = new URL('../../../../fixtures/clips/interrupt.wav', import.meta.url);
 
-const [clipPath, poCode, url = 'ws://127.0.0.1:8080/ws'] = process.argv.slice(2);
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    url: { type: 'string', default: 'ws://127.0.0.1:8080/ws' },
+    'interrupt-after': { type: 'string' },
+  },
+});
+const [clipPath, poCode] = positionals;
+const url = values.url;
+const interruptAfter = values['interrupt-after'];
+const interruptAfterMs = interruptAfter === undefined ? undefined : Number(interruptAfter);
 const clip = pcmFromWav(readFileSync(clipPath));
+const interruptClip = pcmFromWav(readFileSync(INTERRUPT_CLIP));
+let pending = clip;
+const clipSent = () => pending.length === 0;
+let answerStartedAt = 0;
+let interrupted = false;
 const socket = new WebSocket(url);
-const clock = new PlaybackClock(OUTPUT_RATE);
+const player = new ReplayPlayer((message) => socket.send(JSON.stringify(message)));
 const agentAudio: Buffer[] = [];
 const spoken: string[] = [];
-let lastTextAt = 0;
+let lastHeardAt = 0;
 let tracePath: string | undefined;
 
 socket.on('message', (data, isBinary) => {
+  lastHeardAt = Date.now();
   if (isBinary) {
-    clock.add((data as Buffer).length, Date.now());
+    if (clipSent() && player.idle) answerStartedAt ||= Date.now();
+    player.add(data as Buffer);
     agentAudio.push(data as Buffer);
     return;
   }
   const message = JSON.parse(String(data)) as HostMessage;
   if (message.type === 'trace') tracePath = message.path;
+  if (message.type === 'turn') player.startTurn(message.index);
+  if (message.type === 'flush') console.log(`FLUSH     heard ${player.flush()} ms of the turn`);
   if (message.type !== 'transcript') return;
-  lastTextAt = Date.now();
   if (message.role === 'ASSISTANT') spoken.push(message.text.trim());
   console.log(`${message.role.padEnd(9)} ${message.text.trim()}`);
 });
@@ -44,12 +66,22 @@ await new Promise((resolve) => socket.once('open', resolve));
 const started = Date.now();
 const silence = Buffer.alloc(FRAME_BYTES);
 const answered = () =>
-  clock.endsAt > 0 && Date.now() > Math.max(clock.endsAt, lastTextAt) + QUIET_AFTER_MS;
+  agentAudio.length > 0 && player.idle && Date.now() > lastHeardAt + QUIET_AFTER_MS;
+const interruptDue = () =>
+  interruptAfterMs !== undefined &&
+  !interrupted &&
+  answerStartedAt > 0 &&
+  Date.now() >= answerStartedAt + interruptAfterMs;
 for (let frame = 0; ; frame++) {
-  const offset = frame * FRAME_BYTES;
-  const clipDone = offset >= clip.length;
-  if ((clipDone && answered()) || Date.now() - started > MAX_MS) break;
-  socket.send(clipDone ? silence : clip.subarray(offset, offset + FRAME_BYTES));
+  player.tick();
+  if (interruptDue()) {
+    console.log(`CALLER    (interrupt clip, ${Date.now() - answerStartedAt} ms into the answer)`);
+    [pending, interrupted] = [interruptClip, true];
+  }
+  const done = pending.length === 0 && (interruptAfterMs === undefined || interrupted);
+  if ((done && answered()) || Date.now() - started > MAX_MS) break;
+  socket.send(pending.length ? pending.subarray(0, FRAME_BYTES) : silence);
+  pending = pending.subarray(FRAME_BYTES);
   await sleep(started + (frame + 1) * FRAME_MS - Date.now());
 }
 
