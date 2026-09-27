@@ -22,9 +22,10 @@ describe('broken traces', () => {
     ['missing-rendering', 'exact-rendering'],
     ['dead-air', 'no-dead-air'],
     ['rotation-loses-audio', 'rotation-loses-nothing'],
+    ['ungrounded-po', 'grounded-po-data'],
   ])('%s fails only %s', (fixture, check) => {
     const failures = runChecks(load(brokenDir, `${fixture}.json`));
-    expect(failures.map((f) => f.check)).toEqual([check]);
+    expect([...new Set(failures.map((f) => f.check))]).toEqual([check]);
   });
 });
 
@@ -41,5 +42,29 @@ describe('fast flush', () => {
     const trace = load(samplesDir, 'softphone-bargein.json');
     trace.turns[0].audio = { planned_ms: 6000, delivered_ms: 3100, played_ms: 2800 };
     expect(runChecks(trace).map((f) => f.check)).toEqual(['fast-flush']);
+  });
+});
+
+describe('grounded PO data', () => {
+  it.each([
+    'The amount is forty-five thousand two hundred sixteen euros and eighteen cents.',
+    'Purchase order P O dash one zero four eight two from Summit Fasteners has shipped.',
+    'It was ordered on October fourth, twenty twenty-six.',
+  ])('fails a turn with no tool result that says "%s"', (text) => {
+    const trace = load(samplesDir, 'softphone-happy.json');
+    delete trace.turns[0].tool;
+    trace.turns[0].assistant.final_text = text;
+    expect(runChecks(trace).map((f) => f.check)).toEqual(['grounded-po-data']);
+  });
+
+  it.each([
+    'Sorry, I need all five digits of the purchase order code to check the status.',
+    "Sorry, I couldn't find purchase order P O dash one two three four five.",
+    'Sure. What do you need?',
+  ])('passes a turn with no tool result that says "%s"', (text) => {
+    const trace = load(samplesDir, 'softphone-happy.json');
+    delete trace.turns[0].tool;
+    trace.turns[0].assistant.final_text = text;
+    expect(runChecks(trace)).toEqual([]);
   });
 });

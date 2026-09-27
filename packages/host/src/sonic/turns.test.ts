@@ -116,3 +116,20 @@ it('times latency from the last caller segment before the agent answers', () => 
   expect(r.turns()).toHaveLength(1);
   expect(r.turns()[0].latency.voice_to_voice_ms).toBe(500);
 });
+
+it('replays a turn answered from a tool result without the agent reply', () => {
+  const r = new TurnRecorder();
+  const rendering =
+    'Purchase order P O dash one zero four eight two from Summit Fasteners has shipped.';
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of PO-10482?');
+  r.onToolResult('get_po_status', rendering);
+  textBlock(r, 'a1', 'ASSISTANT', FINAL, 30)(`Let me check that. ${rendering}`);
+  textBlock(r, 'u2', 'USER', FINAL, 60)('Thanks.');
+  textBlock(r, 'a2', 'ASSISTANT', FINAL, 70)('You are welcome.');
+
+  expect(r.history()).toEqual([
+    { role: 'USER', text: 'Status of PO-10482?' },
+    { role: 'USER', text: 'Thanks.' },
+    { role: 'ASSISTANT', text: 'You are welcome.' },
+  ]);
+});

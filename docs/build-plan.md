@@ -285,15 +285,16 @@ Two 2-hour windows (H3 and H4) cost about 30 cents in infrastructure. With 15-mi
 
 The build is done when `ci.yml` is green on `main`, the pre-commit hooks pass on all files, the live smoke job in `demo-up` passes including the rotation scenario, the reaper self-test has passed, the README separates built from designed, and the video is recorded.
 
-| Check                         | Rule, per turn                                                                                       | Trace fields                                                             |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Heard never exceeds generated | Audio played is at most audio delivered                                                              | `audio.played_ms`, `audio.delivered_ms`                                  |
-| Fast flush                    | After a barge-in, playback stops within 300 ms (initial target, from M-01)                           | `bargein.at_ms`, `audio.flush_latency_ms`                                |
-| Exact renderings              | Where a tool returned a value and no barge-in cut the answer, the spoken text contains its rendering | `assistant.final_text`, tool rendering                                   |
-| No dead air                   | After the caller stops speaking, agent audio or a filler starts within 2.5 s                         | `latency.voice_to_voice_ms`, `filler.played`                             |
-| Rotation loses nothing        | Across every `FH-05` handoff, caller audio received equals caller audio forwarded to Sonic           | `rotation.audio_in_ms`, `rotation.audio_forwarded_ms`, `rotation.gap_ms` |
+| Check                         | Rule, per turn                                                                                           | Trace fields                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Heard never exceeds generated | Audio played is at most audio delivered                                                                  | `audio.played_ms`, `audio.delivered_ms`                                  |
+| Fast flush                    | After a barge-in, playback stops within 300 ms (initial target, from M-01)                               | `bargein.at_ms`, `audio.flush_latency_ms`                                |
+| Exact renderings              | Where a tool returned a value and no barge-in cut the answer, the spoken text contains its rendering     | `assistant.final_text`, tool rendering                                   |
+| Grounded PO data              | A turn that speaks PO data (code with supplier, status, amount or a date) has a tool result in that turn | `assistant.final_text`, tool rendering                                   |
+| No dead air                   | After the caller stops speaking, agent audio or a filler starts within 2.5 s                             | `latency.voice_to_voice_ms`, `filler.played`                             |
+| Rotation loses nothing        | Across every `FH-05` handoff, caller audio received equals caller audio forwarded to Sonic               | `rotation.audio_in_ms`, `rotation.audio_forwarded_ms`, `rotation.gap_ms` |
 
-The check script, now with five checks, must also fail on hand-edited broken traces, so a check that always passes can't slip through.
+The check script, now with six checks, must also fail on hand-edited broken traces, so a check that always passes can't slip through.
 
 ## Demo video
 

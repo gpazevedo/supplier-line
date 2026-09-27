@@ -50,9 +50,10 @@ export class SonicConnection implements RotatingConnection {
 
   constructor(
     client: BedrockRuntimeClient,
-    private readonly handlers: ConnectionHandlers
+    private readonly handlers: ConnectionHandlers,
+    systemPrompt: string
   ) {
-    setupEvents(this.ids).forEach((e) => this.input.push(e));
+    setupEvents(this.ids, systemPrompt).forEach((e) => this.input.push(e));
     const chunks = (async function* (queue: AsyncQueue<SonicInputEvent>) {
       for await (const e of queue) yield { chunk: { bytes: encoder.encode(JSON.stringify(e)) } };
     })(this.input);

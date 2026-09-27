@@ -28,12 +28,12 @@ const ev = (name: string, body: Record<string, unknown>): SonicInputEvent => ({
 });
 
 /** Session and prompt setup, then the system prompt; nothing is interactive yet. */
-export function setupEvents(ids: SessionIds): SonicInputEvent[] {
+export function setupEvents(ids: SessionIds, systemPrompt = SYSTEM_PROMPT): SonicInputEvent[] {
   const promptName = ids.prompt;
   return [
     ev('sessionStart', {
       inferenceConfiguration: { maxTokens: 1024, topP: 0.9, temperature: 0.7 },
-      turnDetectionConfiguration: { endpointingSensitivity: 'MEDIUM' },
+      turnDetectionConfiguration: { endpointingSensitivity: 'LOW' },
     }),
     ev('promptStart', {
       promptName,
@@ -47,7 +47,7 @@ export function setupEvents(ids: SessionIds): SonicInputEvent[] {
       toolUseOutputConfiguration: { mediaType: 'application/json' },
       toolConfiguration: { tools: [getPoStatusToolSpec] },
     }),
-    ...textBlock(promptName, ids.system, 'SYSTEM', SYSTEM_PROMPT),
+    ...textBlock(promptName, ids.system, 'SYSTEM', systemPrompt),
   ];
 }
 

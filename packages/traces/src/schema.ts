@@ -32,7 +32,7 @@ const eventSchema = z
     path: ['rotation'],
   });
 
-/** One session's trace: the subset of the trace contract that the five acceptance checks read. */
+/** One session's trace: the subset of the trace contract that the acceptance checks read. */
 export const traceSchema = z.object({
   session_id: z.string().min(1),
   front_door: z.enum(['softphone', 'connect']),

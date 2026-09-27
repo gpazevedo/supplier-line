@@ -45,6 +45,26 @@ function exactRendering(turn: Turn): Failure[] {
   return [failure('exact-rendering', `turn ${turn.index}`, `final_text lacks "${tool.rendering}"`)];
 }
 
+const PO_DATA = [
+  /\bP O dash [a-z -]+ from\b/i,
+  /\b(has shipped|is delayed|was delivered|was cancelled)\b/i,
+  /\b(euros|dollars|pounds)\b/i,
+  /\b(January|February|March|April|May|June|July|August|September|October|November|December) [a-z-]+(st|nd|rd|th)\b/,
+];
+
+/** A turn that speaks PO data (code with supplier, status, amount or a date) has a tool result. */
+function groundedPoData(turn: Turn): Failure[] {
+  const text = turn.assistant.final_text;
+  if (turn.tool || !PO_DATA.some((pattern) => pattern.test(text))) return [];
+  return [
+    failure(
+      'grounded-po-data',
+      `turn ${turn.index}`,
+      `PO data spoken with no tool result: "${text}"`
+    ),
+  ];
+}
+
 const MAX_SILENCE_MS = 2500;
 
 /** Agent audio or a filler starts within 2.5 s of the caller stopping. Skipped without an audio ledger. */
@@ -79,9 +99,9 @@ function rotationLosesNothing(event: Trace['events'][number]): Failure[] {
   ];
 }
 
-const turnChecks = [heardLeGenerated, fastFlush, exactRendering, noDeadAir];
+const turnChecks = [heardLeGenerated, fastFlush, exactRendering, groundedPoData, noDeadAir];
 
-/** Runs the five acceptance checks over one trace and returns every violation. */
+/** Runs the acceptance checks over one trace and returns every violation. */
 export function runChecks(trace: Trace): Failure[] {
   return [
     ...trace.turns.flatMap((turn) => turnChecks.flatMap((check) => check(turn))),
