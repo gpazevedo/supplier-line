@@ -176,7 +176,7 @@
 
     <path class="hu todo" d="M822 646 L844 668 L822 690 L800 668 z"/>
     <text class="s" x="822" y="672" text-anchor="middle" font-weight="700">H3</text>
-    <text class="m s" x="822" y="710" text-anchor="middle">demo-up 2 h</text>
+    <text class="m s" x="822" y="710" text-anchor="middle">demo-up 1 h</text>
 
     <rect class="ai todo" x="864" y="646" width="76" height="44" rx="8"/>
     <text class="s" x="902" y="664" text-anchor="middle" font-weight="700">Phase 5</text>

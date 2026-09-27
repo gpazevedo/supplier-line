@@ -14,7 +14,7 @@ on:
         description: Hours the app stack may run (the reaper deletes it at expiry)
         type: choice
         options: ['1', '2', '3', '4', '5', '6', '7', '8']
-        default: '2'
+        default: '1'
 
 permissions: {}
 
