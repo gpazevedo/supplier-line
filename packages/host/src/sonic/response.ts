@@ -20,9 +20,9 @@ const normalise = (text: string) =>
 /**
  * Tracks one connection's agent responses, as AWS's session-continuation sample does: a response
  * is complete when every SPECULATIVE text has its FINAL, or when a text block ends INTERRUPTED.
- * Sonic may answer "Go on" while a tool call is still in flight and speak the result as a later
- * response, so a tool call keeps the response open until its rendering is spoken, the caller
- * barges in, or the caller speaks again after the agent replied.
+ * Sonic may answer briefly ("Let me check that.") while a tool call is still in flight and speak
+ * the result as a later response, so a tool call keeps the response open until its rendering is
+ * spoken, the caller barges in, or the caller speaks again after the agent replied.
  */
 export class ResponseTracker {
   private speculative = 0;
