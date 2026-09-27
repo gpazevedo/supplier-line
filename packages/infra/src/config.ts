@@ -7,3 +7,5 @@ export const PERSISTENT_STACK_NAME = 'supplier-line-persistent';
 export const GITHUB_REPO = 'gpazevedo/supplier-line';
 export const ACCESS_CODE_PARAMETER = '/supplier-line/demo-access-code';
 export const ACCESS_CODE_PLACEHOLDER = 'placeholder-set-by-owner';
+export const CONNECT_INSTANCE_ID_PARAMETER = '/supplier-line/connect-instance-id';
+export const CONNECT_CONTACT_FLOW_ID_PARAMETER = '/supplier-line/connect-contact-flow-id';

@@ -1,18 +1,46 @@
 # host
 
-Session host: `GET /health`, and Nova 2 Sonic sessions with `get_po_status` on the `/ws` WebSocket.
+Session host: `GET /health`, `POST /api/connect/start`, and Nova 2 Sonic sessions with
+`get_po_status` on the `/ws` WebSocket.
 
 ## Run locally and replay a clip
 
 ```bash
-AWS_PROFILE=supplier-dev pnpm --filter host dev            # listens on :8080
+DEMO_ACCESS_CODE=let-me-in AWS_PROFILE=supplier-dev pnpm --filter host dev   # listens on :8080
 pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482
 pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 --interrupt-after 2000
-ROTATE_AFTER_S=60 AWS_PROFILE=supplier-dev pnpm --filter host dev   # rotate every minute
+ROTATE_AFTER_S=60 DEMO_ACCESS_CODE=let-me-in AWS_PROFILE=supplier-dev pnpm --filter host dev   # rotate every minute
 pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 --loop 180
 ```
 
+`DEMO_ACCESS_CODE` is required; the host refuses to start without it. `replay` and
+`replay-clips` (the caller-clip player) don't need it, but a wrong or missing `code` query
+parameter on `/ws` is rejected before any Bedrock call: set `DEMO_ACCESS_CODE` in the environment
+and pass it to `runClip`'s `accessCode` option to exercise the real check end to end (see
+`replay-clips.ts`).
+
 The replay streams the clip in real time, plays the agent audio on a wall clock, waits for the answer to finish playing, then prints the transcript beside the expected rendering. `--interrupt-after <ms>` sends `fixtures/clips/interrupt.wav` that long after the answer starts; `--loop <s>` alternates the clip with `followup-delivery.wav` for that long, each once the previous answer has played and gone quiet for 8 s (`--url` picks another host). Each session writes `traces/<session-id>.json` (set `TRACE_DIR` to change it); the replay also saves the agent audio beside it as `.agent.wav`.
+
+## Access control and limits (S17)
+
+- **Access code.** `/ws` checks the `code` query parameter against `DEMO_ACCESS_CODE` before
+  opening any Bedrock connection. A wrong or missing code gets a `{"type":"rejected","reason":...}`
+  frame, then the socket closes with code `4401`.
+- **Concurrency.** At most 2 sessions at once (`SessionLimits.maxConcurrent`); a third is closed
+  with code `4429` and reason `too many concurrent sessions`.
+- **Session cap.** 15 minutes per session. One minute before the cap, and again at the cap, the
+  host plays a pre-recorded notice directly on the socket (bypassing Sonic, the same idea as the
+  FH-01/03/10 fillers in `phrases/capture.ts`, but not a failure behaviour): captured once with
+  `AWS_PROFILE=supplier-dev pnpm --filter host capture-notices` into `assets/notices/`, which the
+  host reads at startup. Each notice's `turn` index is negative, so the client's own turn/played
+  accounting for the real conversation is untouched.
+- **Keepalive.** A WebSocket ping every 20 s, so CloudFront and the ALB don't drop an otherwise
+  silent connection.
+- **`POST /api/connect/start`.** Calls `StartWebRTCContact` against the persistent stack's Connect
+  instance and contact flow (read from `CONNECT_INSTANCE_ID` / `CONNECT_CONTACT_FLOW_ID`, set from
+  SSM in AWS) and returns `{connectionData, contactId, participantId, participantToken}` for the
+  Connect calling page (S18) to join with the Amazon Chime SDK. Returns 503 if those env vars
+  aren't set, 502 if the call fails.
 
 ## Tool calls
 
