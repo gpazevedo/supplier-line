@@ -17,6 +17,7 @@ interface OpenTurn {
   earlyToolCalls: number;
   caller: string[];
   spoken: string[];
+  fillerPlayed?: boolean;
 }
 
 type Body = Record<string, unknown>;
@@ -62,6 +63,36 @@ export class TurnRecorder {
     if (this.current) this.current.tool = { name, rendering };
   }
 
+  /**
+   * Records a fixed phrase (FH-01) played directly on the socket as a whole turn: `text` is its
+   * only spoken content, `bytes` its audio, played the instant it is detected. Returns the new
+   * turn's index.
+   */
+  onFallback(text: string, bytes: number, atMs: number): number {
+    const index = this.open.length;
+    this.open.push({
+      index,
+      callerAt: atMs,
+      firstAudioAt: atMs,
+      caller: [],
+      spoken: [text],
+      earlyToolCalls: 0,
+    });
+    this.ledger.generated(index, bytes);
+    return index;
+  }
+
+  /**
+   * Records a filler phrase (FH-03/FH-10) played directly during `turnIndex`: its audio counts
+   * toward that turn's generated/delivered total, and `filler.played` is set in its trace entry.
+   */
+  onFiller(turnIndex: number, bytes: number): void {
+    const turn = this.open[turnIndex];
+    if (!turn) return;
+    turn.fillerPlayed = true;
+    this.ledger.generated(turnIndex, bytes);
+  }
+
   turns(): TraceTurn[] {
     return this.open.map((turn, index) => ({
       index,
@@ -71,6 +102,7 @@ export class TurnRecorder {
       ...this.ledger.entry(index),
       ...(turn.tool && { tool: turn.tool }),
       ...(turn.earlyToolCalls > 0 && { early_tool_calls: turn.earlyToolCalls }),
+      ...(turn.fillerPlayed && { filler: { played: true } }),
       assistant: { final_text: turn.spoken.join(' ') },
     }));
   }

@@ -63,6 +63,42 @@ On a barge-in, `bargein.at_ms` is the heard position when Sonic signalled and `a
 
 Sonic closes a connection after 8 minutes, so `sonic/rotator.ts` ports AWS's Python session-continuation pattern. Once a connection is `ROTATE_AFTER_S` old (default 360) and the agent starts speaking (or after 20 s of silence), the host opens the next connection in the background and records caller audio. When the response completes (every speculative text has its final, the text is interrupted, and any tool call's rendering has been spoken), it replays the history into the new connection, using the **heard** agent text from the ledger (an answer built from a tool result is left out, because a new connection copies earlier replies and would speak that PO data again without calling the tool; its system prompt says so and asks for a fresh `get_po_status` call), then the last 3 s of caller audio, makes it current and closes the old one. If the response has not completed 30 s after the next connection opened, it hands over anyway, so the idle next connection cannot time out. The trace records an `FH-05` event with `rotation.gap_ms` (response complete to new connection live) and `rotation.audio_in_ms` / `audio_forwarded_ms` (caller audio received during the transition, and how much reached the old or new connection).
 
+## Failure behaviours (S14)
+
+Three phrases captured by S15 (`assets/phrases/`, voice Matthew, 24 kHz) cover the failures below;
+`phrases/fixed.ts` loads variant 1 of each at startup.
+
+- **FH-01, the stream won't open.** If Sonic's bidirectional stream rejects before it opens (a real
+  Bedrock failure, or the `fault=fh01` flag below), the host plays the captured fallback phrase
+  directly on the socket as a whole turn, traces an `FH-01` event, and closes the session cleanly
+  (`session.run()` resolves rather than rejects; no `1011` close).
+- **FH-03, a stall.** If no agent audio has started 1.5 s after the caller's last transcript
+  segment (`sonic/filler-timer.ts`), including while a tool lookup runs or an early call is held
+  (see "Tool calls" above), the host plays the "One moment." filler once for that turn and records
+  `filler.played`. The filler is queued on the same turn as any later Sonic audio, which the client
+  always plays back to back in the order received (`web/src/softphone/playback-queue.ts`), so it
+  finishes before the real answer starts rather than being cut off; this keeps `audio.played_ms` /
+  `delivered_ms` consistent, since the filler's bytes count toward the turn's delivered audio too.
+- **FH-10, a tool call timeout.** `sonic/tool-timeout.ts` gives `get_po_status` `TOOL_TIMEOUT_MS`
+  (3 s) to answer. Past that, the host plays the "Still checking, one moment." filler, traces an
+  `FH-10` event, and retries once; whatever the first attempt eventually returns is discarded, even
+  if it arrives after the retry started. If the retry also fails to answer in time, the host sends
+  a `toolResult` apology (`ok: false`, a `rendering` to speak) instead, so Sonic always answers the
+  `toolUse` one way or another.
+
+**Fault flags**, `?fault=fh01|fh03|fh10` on `/ws` (never on by default, documented here only):
+forces one of the three behaviours to trigger reliably for the demo video, instead of waiting for a
+real stream-open failure or a slow lookup. `fh01` swaps in a client whose stream never opens, with
+no real Bedrock call. `fh03` and `fh10` make the session's first `get_po_status` call wait 2 s or
+4 s (`sessions.ts`'s `FAULT_TOOL_DELAYS_MS`) before running for real; `fh10`'s delay exceeds the 3 s
+tool timeout, so the first attempt times out and the (undelayed) retry answers normally, giving a
+believable filler-then-retry-then-answer demo. Try, e.g.:
+
+```bash
+DEMO_ACCESS_CODE=let-me-in pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 \
+  --url "ws://127.0.0.1:8080/ws?fault=fh10"   # or fh01 / fh03; --url already carries any query string through to `code`
+```
+
 ## Build
 
 `pnpm --filter host build` bundles `src/main.ts` with esbuild into `dist/main.js`, including the workspace `tools` and `traces` sources.

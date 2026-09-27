@@ -134,6 +134,42 @@ it('replays a turn answered from a tool result without the agent reply', () => {
   ]);
 });
 
+it('records a fallback phrase as a whole turn (FH-01)', () => {
+  const r = new TurnRecorder();
+  const turn = r.onFallback("Sorry, this line can't take your call right now.", 9600, 40);
+  expect(turn).toBe(0);
+  expect(r.turns()).toEqual([
+    {
+      index: 0,
+      latency: { voice_to_voice_ms: 0 },
+      audio: { planned_ms: 200, delivered_ms: 200, played_ms: 0 },
+      assistant: { final_text: "Sorry, this line can't take your call right now." },
+    },
+  ]);
+});
+
+it('marks filler.played and counts the filler into the turn audio ledger (FH-03/FH-10)', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of PO-10482?');
+  r.onFiller(0, 4800);
+  r.onEvent(
+    'audioOutput',
+    { contentId: 'x1', content: Buffer.alloc(48_000).toString('base64') },
+    1600
+  );
+  textBlock(r, 'a1', 'ASSISTANT', FINAL, 2000)('Purchase order one.');
+
+  expect(r.turns()[0]).toMatchObject({
+    filler: { played: true },
+    audio: { planned_ms: 1100, delivered_ms: 1100 },
+  });
+});
+
+it('ignores a filler for a turn index that does not exist', () => {
+  const r = new TurnRecorder();
+  expect(() => r.onFiller(5, 100)).not.toThrow();
+});
+
 it('exposes the current caller text and counts tool calls made while the caller was still reading', () => {
   const r = new TurnRecorder();
   textBlock(r, 'u1', 'USER', FINAL, 0)('Status of P O');

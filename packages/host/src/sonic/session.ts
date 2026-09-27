@@ -2,8 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { NodeHttp2Handler } from '@smithy/node-http-handler';
+import type { DelayOptions } from 'tools/src/po-status/delay.js';
 import type { Trace } from 'traces/src/index.js';
+import type { FixedPhrases } from '../phrases/fixed.js';
 import { SonicConnection } from './connection.js';
+import { FillerTimer } from './filler-timer.js';
 import { Rotator, type RotationStats, type RotatorOptions } from './rotator.js';
 import { continuedPrompt, SYSTEM_PROMPT } from './prompt.js';
 import { callerStillReading } from './reading.js';
@@ -11,6 +14,24 @@ import { isInterruption, TurnRecorder } from './turns.js';
 
 /** Longest a lookup is held while the caller finishes reading the code. */
 const READING_TIMEOUT_MS = 4000;
+
+/** How long with no agent audio after the caller stops speaking before FH-03 plays a filler. */
+export const FH03_STALL_MS = 1500;
+
+/** Forces the session's first `get_po_status` call to wait this long (FH-03/FH-10 fault flag). */
+export interface SessionFault {
+  toolDelayMs?: number;
+}
+
+export interface SessionOptions {
+  /** The captured FH-01/03/10 audio and text (S15). */
+  phrases: FixedPhrases;
+  fault?: SessionFault;
+  /** Overridable for tests; production uses `connection.js`'s default. */
+  toolTimeoutMs?: number;
+  /** Overridable for tests; production uses `FH03_STALL_MS`. */
+  fillerStallMs?: number;
+}
 
 /** Bedrock client for `us-east-1` over HTTP/2, which the bidirectional stream requires. */
 export function createSonicClient(): BedrockRuntimeClient {
@@ -51,17 +72,29 @@ export class SonicSession {
   private readonly roles = new Map<string, string>();
   private readonly finished = Promise.withResolvers<undefined>();
   private readonly rotator: Rotator<SonicConnection>;
+  private readonly filler: FillerTimer;
   private ending = false;
+  /** True once the very first connection's open failure has been handled (FH-01), so a second
+   * report of the same failure (`opened` rejecting and `done` rejecting) is not handled twice. */
+  private openFailed = false;
+  /** One-shot fault delay (FH-03/FH-10), consumed by the session's first tool call. */
+  private faultToolDelayMs?: number;
   /** Code of the PO a lookup found most recently. */
   private lastOrder?: string;
 
   constructor(
     private readonly client: BedrockRuntimeClient,
     private readonly listener: SessionListener,
-    rotation: RotatorOptions
+    rotation: RotatorOptions,
+    private readonly options: SessionOptions
   ) {
+    this.faultToolDelayMs = options.fault?.toolDelayMs;
+    this.filler = new FillerTimer(options.fillerStallMs ?? FH03_STALL_MS, {
+      onFire: (turn) => this.onFillerFire(turn),
+    });
     const first = this.connect(SYSTEM_PROMPT);
     first.resume([]);
+    void this.watchOpen(first);
     this.rotator = new Rotator(
       first,
       {
@@ -120,14 +153,66 @@ export class SonicSession {
           this.rotator.onToolResult(from, rendering);
         },
         callerStillReading: (from) => this.callerStillReading(from),
+        onToolTimeout: (from) => this.onToolTimeout(from),
+        nextToolDelay: () => this.takeToolDelay(),
       },
-      systemPrompt
+      systemPrompt,
+      this.options.toolTimeoutMs
     );
     connection.done.then(
       () => this.onEnded(connection),
       (error: unknown) => this.onEnded(connection, error)
     );
     return connection;
+  }
+
+  /** Resolves the very first open, or hands its rejection to FH-01 (the stream would not open). */
+  private async watchOpen(connection: SonicConnection): Promise<void> {
+    try {
+      await connection.opened;
+    } catch (error) {
+      this.onOpenFailed(connection, error);
+    }
+  }
+
+  private onOpenFailed(connection: SonicConnection, error: unknown): void {
+    if (connection !== this.rotator.current || this.openFailed) return;
+    this.openFailed = true;
+    console.error(`session ${this.id}: Sonic stream would not open`, error);
+    const phrase = this.options.phrases['FH-01'];
+    const turn = this.recorder.onFallback(phrase.text, phrase.pcm.length, this.elapsedMs());
+    this.events.push({ fh: { id: 'FH-01' }, at_ms: this.elapsedMs() });
+    this.listener.onAudio(phrase.pcm, turn);
+    this.ending = true;
+    this.finished.resolve(undefined);
+  }
+
+  /** The next tool call's one-shot fault delay (FH-03/FH-10), if a fault flag set one. */
+  private takeToolDelay(): DelayOptions {
+    const delayMs = this.faultToolDelayMs;
+    this.faultToolDelayMs = undefined;
+    return delayMs ? { delayMs } : {};
+  }
+
+  /** FH-10: a tool call exceeded its timeout; play the filler and trace the event. */
+  private onToolTimeout(from: SonicConnection): void {
+    if (from !== this.rotator.current) return;
+    const turn = this.recorder.currentTurn;
+    if (turn === undefined) return;
+    const phrase = this.options.phrases['FH-10'];
+    this.recorder.onFiller(turn, phrase.pcm.length);
+    this.events.push({ fh: { id: 'FH-10' }, at_ms: this.elapsedMs(), turn });
+    this.listener.onAudio(phrase.pcm, turn);
+    this.log(`FH-10 tool timeout on turn ${turn}: filler played, retrying`);
+  }
+
+  /** FH-03: no agent audio started within the stall window; play the filler once for the turn. */
+  private onFillerFire(turn: number): void {
+    const phrase = this.options.phrases['FH-03'];
+    this.recorder.onFiller(turn, phrase.pcm.length);
+    this.events.push({ fh: { id: 'FH-03' }, at_ms: this.elapsedMs(), turn });
+    this.listener.onAudio(phrase.pcm, turn);
+    this.log(`FH-03 stall on turn ${turn}: filler played`);
   }
 
   private async callerStillReading(from: SonicConnection): Promise<boolean> {
@@ -146,6 +231,7 @@ export class SonicSession {
       if (error) console.error(`session ${this.id}: retired Sonic connection failed`, error);
       return;
     }
+    if (this.openFailed) return;
     if (error) this.finished.reject(error);
     else if (this.ending) this.finished.resolve(undefined);
     else this.finished.reject(new Error('Sonic ended the stream'));
@@ -172,7 +258,10 @@ export class SonicSession {
     if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'audioOutput') this.onAudio(String(body.content));
+    if (name === 'audioOutput') {
+      this.filler.audio();
+      this.onAudio(String(body.content));
+    }
     if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
       this.listener.onInterrupted(this.recorder.currentTurn);
     this.rotator.onOutput(from, name, body);
@@ -202,7 +291,10 @@ export class SonicSession {
     const text = String(body.content);
     if (!this.finalIds.has(id) || isInterruption(text)) return;
     if (role !== 'USER' && role !== 'ASSISTANT') return;
-    if (role === 'USER') this.log(`caller ${JSON.stringify(text)}`);
+    if (role === 'USER') {
+      this.log(`caller ${JSON.stringify(text)}`);
+      if (this.recorder.currentTurn !== undefined) this.filler.caller(this.recorder.currentTurn);
+    }
     this.listener.onTranscript(role, text);
   }
 }
