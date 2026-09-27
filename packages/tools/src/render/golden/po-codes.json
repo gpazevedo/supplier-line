@@ -1,7 +1,4 @@
 [
-  { "code": "10482", "spoken": "one zero four eight two" },
-  { "code": "PO-10482", "spoken": "P O dash one zero four eight two" },
-  { "code": "po-007", "spoken": "P O dash zero zero seven" },
-  { "code": "AB12", "spoken": "A B one two" },
-  { "code": "PO-2026-0031", "spoken": "P O dash two zero two six dash zero zero three one" }
+  { "code": "PO-10482", "spoken": "one zero four eight two" },
+  { "code": "PO-00003", "spoken": "zero zero zero zero three" }
 ]

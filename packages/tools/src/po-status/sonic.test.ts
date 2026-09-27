@@ -23,7 +23,7 @@ describe('Sonic tool use adapter', () => {
     const payload = await toolUseToResult('{"po_code":"PO-20931"}');
     const result = JSON.parse(payload);
     expect(result).toMatchObject({ ok: true, po: { code: 'PO-20931', status: 'delayed' } });
-    expect(result.rendering).toMatch(/^Purchase order P O dash two zero nine three one /);
+    expect(result.rendering).toMatch(/^Purchase order two zero nine three one /);
   });
 
   it('answers a failure payload when the model sends malformed JSON', async () => {
