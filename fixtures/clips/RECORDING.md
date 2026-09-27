@@ -17,7 +17,7 @@ Record with a headset mic in a quiet room. Save every file in this folder, `fixt
 
 | File                    | Say                                                                       |
 | ----------------------- | ------------------------------------------------------------------------- |
-| `po-status-a.wav`       | "What's the status of purchase order P O dash one zero four eight two?"   |
+| `po-status-a.wav`       | "What's the status of purchase order P O one zero four eight two?"        |
 | `po-status-b.wav`       | "What's the status of purchase order P O dash two zero nine three one?"   |
 | `interrupt.wav`         | "Wait, stop."                                                             |
 | `followup-delivery.wav` | "And the delivery date?"                                                  |
@@ -39,7 +39,7 @@ Re-record all four speech clips in one sitting, so they share the same mic, room
 | File                    | Priority    | Say                                                                     |
 | ----------------------- | ----------- | ----------------------------------------------------------------------- |
 | `po-status-b.wav`       | Required    | "What's the status of purchase order P O dash two zero nine three one?" |
-| `po-status-a.wav`       | Recommended | "What's the status of purchase order P O dash one zero four eight two?" |
+| `po-status-a.wav`       | Re-recorded | "What's the status of purchase order P O one zero four eight two?"      |
 | `interrupt.wav`         | Recommended | "Wait, stop."                                                           |
 | `followup-delivery.wav` | Recommended | "And the delivery date?"                                                |
 

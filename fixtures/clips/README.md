@@ -12,4 +12,4 @@
 
 Both PO codes exist in the generated data (`packages/tools/src/data`) with distinct statuses.
 
-Round 2 take: speech peaks about −20 dB, background about −60 dB (−45 dB in `followup-delivery.wav`). Edge padding is digital silence. Recording guide and level check: `RECORDING.md`.
+Round 2 take: speech peaks about −20 dB, background about −60 dB (−45 dB in `followup-delivery.wav`). Edge padding is digital silence. Recording guide and level check: `RECORDING.md`. Clip A was re-recorded without "dash" ("P O one zero four eight two"), matching how the agent now speaks codes.
