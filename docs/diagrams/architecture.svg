@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-labelledby="t d">
   <title id="t">Supplier Line architecture</title>
-  <desc id="d">Browser pages reach CloudFront, which serves the site from S3 and forwards WebSocket and API traffic to an ALB and a Fargate session host that streams to Amazon Nova 2 Sonic on Bedrock. A persistent stack holds ECR, the traces bucket, the access code, Connect with a Lex bot and PO Lambda, the reaper, alerts and GitHub OIDC roles used by GitHub Actions. Dashed items are planned.</desc>
+  <desc id="d">Browser pages reach CloudFront, which serves the site from S3 and forwards WebSocket and API traffic to an ALB and a Fargate session host that streams to Amazon Nova 2 Sonic on Bedrock. A persistent stack holds ECR, the traces bucket, the access code, Connect with a Lex bot and PO Lambda, the reaper, alerts and GitHub OIDC roles used by GitHub Actions. Dashed items are planned (S18).</desc>
   <style>
     svg { --bg:#ffffff; --ink:#1f2328; --muted:#59636e; --line:#8c959f; --frame:#d0d7de;
           --web:#ddf4ff; --web-s:#0969da; --aws:#fff1e5; --aws-s:#bc4c00; --ai:#efe9ff; --ai-s:#6639ba;
@@ -39,7 +39,7 @@
   <text class="h1" x="40" y="44">Supplier Line architecture (AWS us-east-1)</text>
   <g transform="translate(870 30)">
     <path class="arrow" d="M0 8 H40"/><text class="m" x="48" y="12">built</text>
-    <path class="darrow" d="M110 8 H150"/><text class="m" x="158" y="12">planned (S17, S18)</text>
+    <path class="darrow" d="M110 8 H150"/><text class="m" x="158" y="12">planned (S18)</text>
   </g>
 
   <!-- Browser -->
@@ -166,7 +166,7 @@
   <text class="m" x="846" y="276" text-anchor="middle">tool use</text>
   <path class="arrow" d="M650 380 V506"/>
   <text class="m" x="656" y="440">traces</text>
-  <path class="darrow" d="M770 380 V506"/>
+  <path class="arrow" d="M770 380 V506"/>
   <text class="m" x="764" y="470" text-anchor="end">code check</text>
   <path class="arrow" d="M470 506 V450 H610 V384"/>
   <text class="m" x="480" y="444">image</text>

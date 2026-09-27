@@ -67,7 +67,7 @@
 
   <rect class="ai" x="470" y="120" width="420" height="80" rx="8"/>
   <text class="t" x="486" y="144">WebSocket server</text>
-  <text x="486" y="164">one session per socket; access code and caps come in S17</text>
+  <text x="486" y="164">access code, 15-min cap, 2 sessions, 20 s keepalive</text>
   <text class="code" x="486" y="186">sessions.ts</text>
 
   <rect class="ai" x="470" y="220" width="420" height="80" rx="8"/>

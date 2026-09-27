@@ -8,17 +8,18 @@ A caller says a code such as "P O dash one zero four eight two". The agent looks
 
 ## Status
 
-| Area                                                                                       | State       |
-| ------------------------------------------------------------------------------------------ | ----------- |
-| PO data, renderings, `get_po_status`, traces and trace checks, viewer                      | Built       |
-| Session host: Sonic streaming, barge-in, playback ledger, session rotation                 | Built       |
-| Softphone and trace viewer, WCAG 2.2 AA checked with axe                                   | Built       |
-| Caller-clip player, fixed phrases                                                          | Built       |
-| CDK persistent and app stacks, reaper, GitHub workflows                                    | Built       |
-| Access code and session limits (S17), failure behaviours (S14), Connect calling page (S18) | In progress |
-| Final review (S19), README and ADRs (S20)                                                  | Planned     |
+| Area                                                                          | State       |
+| ----------------------------------------------------------------------------- | ----------- |
+| PO data, renderings, `get_po_status`, traces and trace checks, viewer         | Built       |
+| Session host: Sonic streaming, barge-in, playback ledger, session rotation    | Built       |
+| Softphone and trace viewer, WCAG 2.2 AA checked with axe                      | Built       |
+| Caller-clip player, fixed phrases                                             | Built       |
+| CDK persistent and app stacks, reaper, GitHub workflows                       | Built       |
+| Access code, 15-minute cap, 2 concurrent sessions, `/api/connect/start` (S17) | Built       |
+| Failure behaviours (S14), Connect calling page (S18)                          | In progress |
+| Final review (S19), README and ADRs (S20)                                     | Planned     |
 
-Known issue: after a session rotation, Sonic sometimes mishears the PO code. A fix is in progress.
+Known issue: Sonic sometimes mishears a paused "P O dash" when it is not the first thing said in a call, most often after a session rotation. The check digit turns each mishearing into "please say it again". A fix is in progress.
 
 ## Run it locally
 
@@ -26,15 +27,16 @@ Needs Node.js LTS, pnpm and an AWS profile with Bedrock access (`supplier-dev`).
 
 ```bash
 pnpm install
+export DEMO_ACCESS_CODE=<any local code>          # never commit it
 AWS_PROFILE=supplier-dev pnpm --filter host dev   # host on :8080
-pnpm --filter web dev                             # open /softphone.html
+pnpm --filter web dev                             # open /softphone.html, enter the code
 ```
 
 Use headphones. Each session writes `traces/<session-id>.json`. Open the viewer (`index.html` on the same dev server) to see planned, generated and heard audio per turn.
 
 Host settings: `PORT`, `TRACE_DIR`, and `ROTATE_AFTER_S` (default 360; set 60 to hear rotations).
 
-Replay recorded caller clips instead of talking:
+Replay recorded caller clips instead of talking (both commands read `DEMO_ACCESS_CODE`):
 
 ```bash
 pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482
