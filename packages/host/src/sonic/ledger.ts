@@ -50,6 +50,12 @@ export class PlaybackLedger {
     this.at(turn).flushedAt = atMs;
   }
 
+  /** Milliseconds of the turn the caller heard, if a barge-in cut it; undefined otherwise. */
+  heardMs(turn: number): number | undefined {
+    const ledger = this.turns.get(turn);
+    return ledger?.interruptedAt === undefined ? undefined : ledger.playedMs;
+  }
+
   /** The trace fields for one turn: `audio`, plus `bargein` when the caller cut in. */
   entry(turn: number): Pick<TraceTurn, 'audio' | 'bargein'> {
     const ledger = this.turns.get(turn);

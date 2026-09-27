@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   audioInput,
   closingEvents,
-  openingEvents,
+  resumeEvents,
+  setupEvents,
   toolResultEvents,
   type SonicInputEvent,
 } from './events.js';
@@ -12,8 +13,8 @@ const ids = { prompt: 'p1', system: 's1', audio: 'a1' };
 const nameOf = (e: SonicInputEvent) => Object.keys(e.event)[0];
 const body = (e: SonicInputEvent) => Object.values(e.event)[0];
 
-describe('openingEvents', () => {
-  const events = openingEvents(ids);
+describe('setupEvents then resumeEvents', () => {
+  const events = [...setupEvents(ids), ...resumeEvents(ids, [])];
 
   it('opens session, prompt, system text, then the audio container', () => {
     expect(events.map(nameOf)).toEqual([
@@ -76,4 +77,32 @@ it('system prompt tells the model to speak the rendering exactly', () => {
   expect(SYSTEM_PROMPT).toMatch(/get_po_status/);
   expect(SYSTEM_PROMPT).toMatch(/rendering/);
   expect(SYSTEM_PROMPT).toMatch(/exactly/i);
+});
+
+it('resumeEvents replays history as non-interactive TEXT blocks before the audio container', () => {
+  const events = resumeEvents(ids, [
+    { role: 'USER', text: 'Status of PO-10482?' },
+    { role: 'ASSISTANT', text: 'It has shipped.' },
+  ]);
+  expect(events.map(nameOf)).toEqual([
+    ...['contentStart', 'textInput', 'contentEnd'],
+    ...['contentStart', 'textInput', 'contentEnd'],
+    'contentStart',
+  ]);
+  const [userStart, userText, userEnd, assistantStart] = events.map(body);
+  expect(userStart).toMatchObject({
+    promptName: 'p1',
+    type: 'TEXT',
+    role: 'USER',
+    interactive: false,
+  });
+  expect(userText).toEqual({
+    promptName: 'p1',
+    contentName: userStart.contentName,
+    content: 'Status of PO-10482?',
+  });
+  expect(userEnd).toEqual({ promptName: 'p1', contentName: userStart.contentName });
+  expect(assistantStart).toMatchObject({ role: 'ASSISTANT' });
+  expect(assistantStart.contentName).not.toBe(userStart.contentName);
+  expect(body(events[6])).toMatchObject({ contentName: 'a1', type: 'AUDIO', interactive: true });
 });

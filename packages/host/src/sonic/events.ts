@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import { getPoStatusToolSpec } from 'tools/src/po-status/index.js';
+import type { HistoryMessage } from './history.js';
 import { SYSTEM_PROMPT } from './prompt.js';
 
 /** One event sent to Nova 2 Sonic, serialised as the JSON of a stream chunk. */
@@ -25,8 +27,8 @@ const ev = (name: string, body: Record<string, unknown>): SonicInputEvent => ({
   event: { [name]: body },
 });
 
-/** Session and prompt setup, the system prompt, then the open caller-audio container. */
-export function openingEvents(ids: SessionIds): SonicInputEvent[] {
+/** Session and prompt setup, then the system prompt; nothing is interactive yet. */
+export function setupEvents(ids: SessionIds): SonicInputEvent[] {
   const promptName = ids.prompt;
   return [
     ev('sessionStart', {
@@ -45,16 +47,15 @@ export function openingEvents(ids: SessionIds): SonicInputEvent[] {
       toolUseOutputConfiguration: { mediaType: 'application/json' },
       toolConfiguration: { tools: [getPoStatusToolSpec] },
     }),
-    ev('contentStart', {
-      promptName,
-      contentName: ids.system,
-      type: 'TEXT',
-      interactive: false,
-      role: 'SYSTEM',
-      textInputConfiguration: text,
-    }),
-    ev('textInput', { promptName, contentName: ids.system, content: SYSTEM_PROMPT }),
-    ev('contentEnd', { promptName, contentName: ids.system }),
+    ...textBlock(promptName, ids.system, 'SYSTEM', SYSTEM_PROMPT),
+  ];
+}
+
+/** Conversation history as TEXT blocks (empty on a fresh call), then the open caller-audio container. */
+export function resumeEvents(ids: SessionIds, history: HistoryMessage[]): SonicInputEvent[] {
+  const promptName = ids.prompt;
+  return [
+    ...history.flatMap(({ role, text }) => textBlock(promptName, randomUUID(), role, text)),
     ev('contentStart', {
       promptName,
       contentName: ids.audio,
@@ -63,6 +64,26 @@ export function openingEvents(ids: SessionIds): SonicInputEvent[] {
       role: 'USER',
       audioInputConfiguration: { ...lpcm, sampleRateHertz: INPUT_RATE, audioType: 'SPEECH' },
     }),
+  ];
+}
+
+function textBlock(
+  promptName: string,
+  contentName: string,
+  role: string,
+  content: string
+): SonicInputEvent[] {
+  return [
+    ev('contentStart', {
+      promptName,
+      contentName,
+      type: 'TEXT',
+      interactive: false,
+      role,
+      textInputConfiguration: text,
+    }),
+    ev('textInput', { promptName, contentName, content }),
+    ev('contentEnd', { promptName, contentName }),
   ];
 }
 
