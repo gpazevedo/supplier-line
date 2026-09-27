@@ -77,3 +77,13 @@ it('releases a pending tool call on an interruption', () => {
   expect(t.onEvent('contentEnd', { type: 'TEXT', stopReason: 'INTERRUPTED' })).toBe('complete');
   expect(t.idle).toBe(true);
 });
+
+it('completes the next response after an interruption left a speculative text without its final', () => {
+  const t = new ResponseTracker();
+  text(t, 's1', 'ASSISTANT', SPECULATIVE, 'I need all five digits.');
+  text(t, 'f1', 'ASSISTANT', FINAL, '{ "interrupted" : true }');
+  t.onEvent('contentEnd', { type: 'TEXT', stopReason: 'INTERRUPTED' });
+  text(t, 's2', 'ASSISTANT', SPECULATIVE, 'Let me check that.');
+  expect(text(t, 'f2', 'ASSISTANT', FINAL, 'Let me check that.')[1]).toBe('complete');
+  expect(t.idle).toBe(true);
+});

@@ -4,7 +4,12 @@ import { Rotator, type RotatingConnection, type RotationStats } from './rotator.
 
 const FINAL = '{"generationStage":"FINAL"}';
 const SPECULATIVE = '{"generationStage":"SPECULATIVE"}';
-const options = { thresholdMs: 60_000, bufferMs: 3000, audioStartTimeoutMs: 20_000 };
+const options = {
+  thresholdMs: 60_000,
+  bufferMs: 3000,
+  audioStartTimeoutMs: 20_000,
+  handoverTimeoutMs: 30_000,
+};
 const HISTORY: HistoryMessage[] = [{ role: 'USER', text: 'Status?' }];
 
 class FakeConnection implements RotatingConnection {
@@ -225,4 +230,17 @@ it('does not hand over on a "Go on" while a tool call waits for its spoken rende
   speak(first, 'r2', 'Purchase order shipped.')();
   await vi.advanceTimersByTimeAsync(0);
   expect(rotator.current).toBe(opened[0]);
+});
+
+it('hands over anyway when the response has not completed by the handover timeout', async () => {
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  vi.advanceTimersByTime(60_000);
+  speak(first, 'r1', 'Purchase order.');
+  opened[0].open();
+  await vi.advanceTimersByTimeAsync(29_000);
+  expect(rotator.current).toBe(first);
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(rotator.current).toBe(opened[0]);
+  expect(first.closed).toBe(true);
+  expect(rotated).toHaveLength(1);
 });
