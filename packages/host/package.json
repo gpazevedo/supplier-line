@@ -4,10 +4,22 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/main.js"
+    "build": "esbuild src/main.ts --bundle --platform=node --format=esm --target=node24 --outfile=dist/main.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "start": "node dist/main.js",
+    "dev": "tsx src/main.ts",
+    "replay": "tsx src/replay/main.ts"
   },
   "files": [
     "dist"
-  ]
+  ],
+  "devDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1141.0",
+    "@smithy/node-http-handler": "^4.12.1",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.28.2",
+    "tools": "workspace:^",
+    "traces": "workspace:^",
+    "tsx": "^4.23.15",
+    "ws": "^8.21.3"
+  }
 }
