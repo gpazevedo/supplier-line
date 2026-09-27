@@ -21,7 +21,7 @@ A caller says a code such as "P O one zero four eight two". The agent looks it u
 
 Known issues:
 
-- After a session rotation, Sonic often mishears a code read with a paused "P O dash", though codes read as "P O" and digits are heard correctly. The agent no longer says "dash", and the host holds any lookup the caller has not finished reading. The check digit turns each mishearing into "please say it again".
+- Sonic still occasionally mishears a code (for example it hears only three digits). The host holds any lookup the caller has not finished reading, and the check digit turns every mishearing into "please say it again", so no other order's data is spoken. Across rotations, codes and follow-ups are now answered through the tool.
 - Before H3: `demo-up`'s smoke job runs the trace checks on the committed fixtures only. The deployed host writes its traces to the traces bucket, so the live traces are not checked yet.
 
 ## Run it locally
