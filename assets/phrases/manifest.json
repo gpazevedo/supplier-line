@@ -1,0 +1,65 @@
+[
+  {
+    "id": "FH-01",
+    "text": "Sorry, this line can't take your call right now. Please try again shortly.",
+    "file": "FH-01-1.wav",
+    "duration_ms": 3920,
+    "transcript": "Sorry, this line can't take your call right now. Please try again shortly."
+  },
+  {
+    "id": "FH-01",
+    "text": "Sorry, this line can't take your call right now. Please try again shortly.",
+    "file": "FH-01-2.wav",
+    "duration_ms": 3800,
+    "transcript": "Sorry, this line can't take your call right now. Please try again shortly."
+  },
+  {
+    "id": "FH-01",
+    "text": "Sorry, this line can't take your call right now. Please try again shortly.",
+    "file": "FH-01-3.wav",
+    "duration_ms": 3840,
+    "transcript": "Sorry, this line can't take your call right now. Please try again shortly."
+  },
+  {
+    "id": "FH-03",
+    "text": "One moment.",
+    "file": "FH-03-1.wav",
+    "duration_ms": 960,
+    "transcript": "One moment."
+  },
+  {
+    "id": "FH-03",
+    "text": "One moment.",
+    "file": "FH-03-2.wav",
+    "duration_ms": 1240,
+    "transcript": "One moment."
+  },
+  {
+    "id": "FH-03",
+    "text": "One moment.",
+    "file": "FH-03-3.wav",
+    "duration_ms": 1200,
+    "transcript": "One moment."
+  },
+  {
+    "id": "FH-10",
+    "text": "Still checking, one moment.",
+    "file": "FH-10-1.wav",
+    "duration_ms": 1640,
+    "transcript": "Still checking, one moment."
+  },
+  {
+    "id": "FH-10",
+    "text": "Still checking, one moment.",
+    "file": "FH-10-2.wav",
+    "duration_ms": 1680,
+    "transcript": "Still checking, one moment."
+  },
+  {
+    "id": "FH-10",
+    "text": "Still checking, one moment.",
+    "file": "FH-10-3.wav",
+    "duration_ms": 1640,
+    "transcript": "Still checking, one moment."
+  }
+]
