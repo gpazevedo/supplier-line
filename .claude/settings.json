@@ -19,7 +19,19 @@
       "Bash(ffmpeg:*)",
       "Bash(aws s3 ls:*)",
       "Bash(aws s3 cp:*)",
-      "Bash(aws logs:*)"
+      "Bash(aws logs:*)",
+      "Bash(ffprobe:*)",
+      "Bash(gh search:*)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:docs.aws.amazon.com)",
+      "mcp__plugin_deploy-on-aws_awsknowledge__aws___search_documentation",
+      "mcp__plugin_deploy-on-aws_awsknowledge__aws___read_documentation",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs",
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__take_snapshot"
     ],
     "deny": [
       "Bash(git commit --no-verify:*)",
