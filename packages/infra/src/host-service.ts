@@ -9,12 +9,30 @@ import {
   FargateTaskDefinition,
   LogDrivers,
   OperatingSystemFamily,
+  Secret,
 } from 'aws-cdk-lib/aws-ecs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { StringParameter } from 'aws-cdk-lib/aws-ssm';
 import type { Construct } from 'constructs';
-import { ECR_REPOSITORY, HEALTH_PATH, HOST_PORT, NOVA_SONIC_MODEL } from './config';
+import {
+  ACCESS_CODE_PARAMETER,
+  CONNECT_CONTACT_FLOW_ID_PARAMETER,
+  CONNECT_INSTANCE_ID_PARAMETER,
+  ECR_REPOSITORY,
+  HEALTH_PATH,
+  HOST_PORT,
+  NOVA_SONIC_MODEL,
+} from './config';
 import type { LoadBalancer } from './load-balancer';
+
+/**
+ * References to SSM parameters owned by the persistent stack, by name only: no synth-time lookup,
+ * since the parameter's value is only known once that stack (deployed separately) has run.
+ */
+function persistentParameter(scope: Construct, id: string, name: string) {
+  return StringParameter.fromStringParameterName(scope, id, name);
+}
 
 function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDefinition {
   const stack = Stack.of(scope);
@@ -39,6 +57,17 @@ function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDe
         removalPolicy: RemovalPolicy.DESTROY,
       }),
     }),
+    secrets: {
+      DEMO_ACCESS_CODE: Secret.fromSsmParameter(
+        persistentParameter(scope, 'AccessCodeParam', ACCESS_CODE_PARAMETER)
+      ),
+      CONNECT_INSTANCE_ID: Secret.fromSsmParameter(
+        persistentParameter(scope, 'ConnectInstanceIdParam', CONNECT_INSTANCE_ID_PARAMETER)
+      ),
+      CONNECT_CONTACT_FLOW_ID: Secret.fromSsmParameter(
+        persistentParameter(scope, 'ConnectContactFlowIdParam', CONNECT_CONTACT_FLOW_ID_PARAMETER)
+      ),
+    },
   });
   task.addToTaskRolePolicy(
     new PolicyStatement({

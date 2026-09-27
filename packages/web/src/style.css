@@ -150,9 +150,15 @@ main {
 /* Target Size Minimum (2.5.8): at least 24x24 CSS px, regardless of the browser's own defaults. */
 button,
 select,
-input[type='file'] {
+input[type='file'],
+input[type='password'] {
   min-height: 24px;
   padding: 0.5rem 0.75rem;
+}
+
+label {
+  display: block;
+  margin-top: 0.5rem;
 }
 
 .status {

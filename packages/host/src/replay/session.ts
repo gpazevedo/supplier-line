@@ -48,7 +48,12 @@ function withAccessCode(url: string, accessCode: string | undefined): string {
   return withCode.toString();
 }
 
-/** Runs one session against the host and resolves once the sequence is answered and the socket closes. */
+/**
+ * Runs one session against the host and resolves once the sequence is answered and the socket
+ * closes. Rejects promptly, instead of running until `MAX_MS`, if the host sends `rejected` (a
+ * wrong or missing access code, or the concurrency cap) or otherwise closes the socket before the
+ * call's own `end` message was sent.
+ */
 export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
   const log = options.onLog ?? (() => undefined);
   const socket = new WebSocket(withAccessCode(options.url, options.accessCode));
@@ -65,6 +70,13 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
   let pending = options.sequence[0] ?? Buffer.alloc(0);
   const clipSent = () => pending.length === 0;
 
+  let rejectedReason: string | undefined;
+  let endRequested = false;
+  let closedUnexpectedly: { code: number; reason: string } | undefined;
+
+  socket.on('close', (code, reason) => {
+    if (!endRequested) closedUnexpectedly = { code, reason: reason.toString() };
+  });
   socket.on('message', (data, isBinary) => {
     lastHeardAt = Date.now();
     if (isBinary) {
@@ -75,6 +87,7 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
       return;
     }
     const message = JSON.parse(String(data)) as HostMessage;
+    if (message.type === 'rejected') rejectedReason = message.reason;
     if (message.type === 'trace') tracePath = message.path;
     if (message.type === 'turn') player.startTurn(message.index);
     if (message.type === 'flush') {
@@ -85,7 +98,20 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     transcript.push({ role: message.role, text: message.text.trim() });
     log(`${message.role.padEnd(9)} ${message.text.trim()}`);
   });
-  await new Promise((resolve) => socket.once('open', resolve));
+  await new Promise<void>((resolve, reject) => {
+    socket.once('open', () => resolve());
+    socket.once('error', reject);
+  });
+
+  /** Throws with the reason the host gave, or the close code, once the socket has closed early. */
+  function throwIfClosed(): void {
+    if (!closedUnexpectedly) return;
+    if (rejectedReason !== undefined) throw new Error(`call rejected: ${rejectedReason}`);
+    const { code, reason } = closedUnexpectedly;
+    throw new Error(
+      `connection closed before the call finished (code ${code}${reason ? `: ${reason}` : ''})`
+    );
+  }
 
   const started = Date.now();
   const silence = Buffer.alloc(FRAME_BYTES);
@@ -99,6 +125,7 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     Date.now() >= answerStartedAt + options.interruptAfterMs;
 
   for (let frame = 0; ; frame++) {
+    throwIfClosed();
     player.tick();
     if (interruptDue()) {
       log(`CALLER    (interrupt clip, ${Date.now() - answerStartedAt} ms into the answer)`);
@@ -119,9 +146,11 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     pending = pending.subarray(FRAME_BYTES);
     await sleep(started + (frame + 1) * FRAME_MS - Date.now());
   }
+  throwIfClosed();
 
+  endRequested = true;
   socket.send(JSON.stringify({ type: 'end' }));
-  await new Promise((resolve) => socket.once('close', resolve));
+  await new Promise<void>((resolve) => socket.once('close', () => resolve()));
 
   return { tracePath, agentAudio: Buffer.concat(agentAudio), transcript, flushCount, turnsSent };
 }

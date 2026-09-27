@@ -3,7 +3,7 @@
  * a local or deployed host, writing a trace per scenario and reporting pass/fail. `--url` accepts
  * either a full `ws(s)://.../ws` endpoint or a bare `http(s)://` site URL, which is normalised to
  * its `/ws` WebSocket route. `DEMO_ACCESS_CODE`, when set, is sent as a `code` query parameter,
- * ready for the host to check once S17 lands.
+ * which the host checks on connect (S17).
  * Usage: `pnpm --filter scripts run replay-clips -- --url <url> --out <dir> [--long-seconds n]`.
  */
 import { readFileSync } from 'node:fs';

@@ -5,7 +5,12 @@
  * clip with `followup-delivery.wav` for that long, each clip once the previous answer has played
  * and gone quiet. Each session writes `traces/<session-id>.json` (set `TRACE_DIR` to change it);
  * this CLI also saves the agent audio beside it as `.agent.wav`.
- * Usage: `pnpm --filter host replay <clip.wav> [PO-code] [--interrupt-after ms] [--loop s] [--url ws-url]`.
+ *
+ * The host checks an access code on connect (S17): pass one with `--code`, or set
+ * `DEMO_ACCESS_CODE` in the environment. A wrong or missing code (or the 2-session cap) makes the
+ * host reject the connection; this CLI reports that and exits 1 rather than hanging.
+ *
+ * Usage: `pnpm --filter host replay <clip.wav> [PO-code] [--interrupt-after ms] [--loop s] [--url ws-url] [--code access-code]`.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
@@ -23,11 +28,13 @@ const { values, positionals } = parseArgs({
     url: { type: 'string', default: 'ws://127.0.0.1:8080/ws' },
     'interrupt-after': { type: 'string' },
     loop: { type: 'string' },
+    code: { type: 'string' },
   },
 });
 const [clipPath, poCode] = positionals;
 const interruptAfter = values['interrupt-after'];
 const interruptAfterMs = interruptAfter === undefined ? undefined : Number(interruptAfter);
+const accessCode = values.code ?? process.env.DEMO_ACCESS_CODE;
 const clip = pcmFromWav(readFileSync(clipPath));
 const followup = pcmFromWav(readFileSync(FOLLOWUP_CLIP));
 
@@ -42,7 +49,11 @@ const result = await runClip({
     interruptAfterMs === undefined ? undefined : pcmFromWav(readFileSync(INTERRUPT_CLIP)),
   interruptAfterMs,
   loopForMs: Number(values.loop ?? 0) * 1000,
+  accessCode,
   onLog: log,
+}).catch((error: unknown) => {
+  console.error(`\n${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
 });
 
 console.log(`\ntrace: ${result.tracePath ?? 'none written'}`);

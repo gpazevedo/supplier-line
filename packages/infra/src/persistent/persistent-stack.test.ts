@@ -1,7 +1,13 @@
 import { App } from 'aws-cdk-lib';
 import { Annotations, Match, Template } from 'aws-cdk-lib/assertions';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { ACCESS_CODE_PARAMETER, ACCESS_CODE_PLACEHOLDER, ECR_REPOSITORY } from '../config';
+import {
+  ACCESS_CODE_PARAMETER,
+  ACCESS_CODE_PLACEHOLDER,
+  CONNECT_CONTACT_FLOW_ID_PARAMETER,
+  CONNECT_INSTANCE_ID_PARAMETER,
+  ECR_REPOSITORY,
+} from '../config';
 import { ERROR_MESSAGE } from './contact-flow';
 import { PersistentStack } from './persistent-stack';
 
@@ -75,6 +81,32 @@ describe('PersistentStack storage', () => {
     template.hasResourceProperties('AWS::SSM::Parameter', {
       Name: ACCESS_CODE_PARAMETER,
       Value: ACCESS_CODE_PLACEHOLDER,
+    });
+  });
+});
+
+describe('PersistentStack Connect ID parameters', () => {
+  it('publishes the Connect instance ID for the host to read over SSM', () => {
+    template.hasResourceProperties('AWS::SSM::Parameter', {
+      Name: CONNECT_INSTANCE_ID_PARAMETER,
+      Value: { 'Fn::GetAtt': [logicalId('AWS::Connect::Instance'), 'Id'] },
+    });
+  });
+
+  it('publishes the contact flow ID, taken from the segment after "contact-flow/" in its ARN', () => {
+    const param = Object.values(template.findResources('AWS::SSM::Parameter')).find(
+      (r) => r.Properties.Name === CONNECT_CONTACT_FLOW_ID_PARAMETER
+    );
+    expect(param?.Properties.Value).toEqual({
+      'Fn::Select': [
+        1,
+        {
+          'Fn::Split': [
+            '/contact-flow/',
+            { 'Fn::GetAtt': [logicalId('AWS::Connect::ContactFlow'), 'ContactFlowArn'] },
+          ],
+        },
+      ],
     });
   });
 });

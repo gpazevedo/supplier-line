@@ -46,10 +46,23 @@ async function startCapture(socket: WebSocket): Promise<MediaStream> {
   return mic;
 }
 
-async function call(): Promise<() => void> {
+const codeLabel = el('label', '', 'Access code') as HTMLLabelElement;
+codeLabel.htmlFor = 'access-code';
+const codeInput = document.createElement('input');
+codeInput.type = 'password';
+codeInput.id = 'access-code';
+codeInput.autocomplete = 'off';
+
+/** A closure that ends the call in progress; cleared once the socket actually closes. */
+let hangUp: (() => void) | undefined;
+const button = el('button', '', 'Call') as HTMLButtonElement;
+
+async function call(): Promise<void> {
   status.textContent = 'Calling…';
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  const socket = new WebSocket(`${scheme}://${location.host}/ws`);
+  const url = new URL(`${scheme}://${location.host}/ws`);
+  if (codeInput.value) url.searchParams.set('code', codeInput.value);
+  const socket = new WebSocket(url);
   socket.binaryType = 'arraybuffer';
   const play = await startPlayback(socket);
   socket.onmessage = ({ data }) => {
@@ -59,31 +72,26 @@ async function call(): Promise<() => void> {
     if (message.type === 'turn' || message.type === 'flush') play(message);
     if (message.type === 'transcript') say(`${message.role}: ${message.text}`);
     if (message.type === 'trace') say(`Trace written: ${message.path}`);
+    if (message.type === 'rejected') say(`Call rejected: ${message.reason}`);
   };
+  const mic = await startCapture(socket);
   socket.onclose = () => {
+    mic.getTracks().forEach((track) => track.stop());
+    hangUp = undefined;
+    button.textContent = 'Call';
     status.textContent = 'Call ended.';
     say('Call ended.');
   };
-  const mic = await startCapture(socket);
-  status.textContent = 'On a call. Ask for the status of a purchase order.';
-  return () => {
-    socket.send(JSON.stringify({ type: 'end' }));
-    mic.getTracks().forEach((track) => track.stop());
+  hangUp = () => {
+    if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'end' }));
   };
+  status.textContent = 'On a call. Ask for the status of a purchase order.';
+  button.textContent = 'Hang up';
 }
 
-const button = el('button', '', 'Call') as HTMLButtonElement;
-let hangUp: (() => void) | undefined;
 button.addEventListener('click', async () => {
-  if (hangUp) {
-    hangUp();
-    hangUp = undefined;
-    button.textContent = 'Call';
-    status.textContent = 'Not on a call.';
-    return;
-  }
-  hangUp = await call();
-  button.textContent = 'Hang up';
+  if (hangUp) hangUp();
+  else await call();
 });
 
 document
@@ -91,6 +99,8 @@ document
   ?.append(
     el('h1', '', 'Supplier Line softphone'),
     el('p', 'muted', 'Use headphones. Ask for the status of a purchase order.'),
+    codeLabel,
+    codeInput,
     button,
     status,
     transcriptHeading,

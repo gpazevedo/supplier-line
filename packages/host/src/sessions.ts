@@ -2,19 +2,22 @@ import type { Server } from 'node:http';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import type { TraceWriter } from 'traces/src/index.js';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { OUTPUT_RATE } from './sonic/events.js';
 import type { RotatorOptions } from './sonic/rotator.js';
 import { SonicSession } from './sonic/session.js';
 
 /**
  * Messages the host sends as JSON text frames; agent audio goes out as binary frames. A `turn`
  * marker precedes the first audio of each turn; `flush` means drop all queued agent audio, and
- * names the interrupted turn, which may not have sent any audio yet.
+ * names the interrupted turn, which may not have sent any audio yet. `rejected` is sent just
+ * before the socket closes without a session ever starting (S17).
  */
 export type HostMessage =
   | { type: 'transcript'; role: 'USER' | 'ASSISTANT'; text: string }
   | { type: 'turn'; index: number }
   | { type: 'flush'; turn?: number }
-  | { type: 'trace'; path: string };
+  | { type: 'trace'; path: string }
+  | { type: 'rejected'; reason: string };
 
 /**
  * Messages the client sends as JSON text frames: running totals of milliseconds played per turn,
@@ -25,23 +28,83 @@ export type ClientMessage =
   | { type: 'flushed'; turn: number; ms: number }
   | { type: 'end' };
 
+/** Pre-recorded phrases played directly on the socket, bypassing Sonic, for the session-cap warning and close (S17). */
+export interface SessionNotices {
+  warning: Buffer;
+  expired: Buffer;
+}
+
+export interface SessionLimits {
+  /** Sessions refused past this count; a WebSocket close code 4429 names the reason. */
+  maxConcurrent: number;
+  /** Session lifetime; at this point the session is closed after `expired` plays. */
+  capMs: number;
+  /** How long before the cap `warning` plays. */
+  warnBeforeMs: number;
+  /** How often a WebSocket ping keeps the connection alive through the ALB and CloudFront. */
+  keepaliveMs: number;
+}
+
+export const DEFAULT_LIMITS: SessionLimits = {
+  maxConcurrent: 2,
+  capMs: 15 * 60_000,
+  warnBeforeMs: 60_000,
+  keepaliveMs: 20_000,
+};
+
 export interface SessionDeps {
   client: BedrockRuntimeClient;
   writer: TraceWriter;
   rotation: RotatorOptions;
+  /** Checked against the `code` query parameter on connect; wrong or missing is rejected first. */
+  accessCode: string;
+  notices: SessionNotices;
+  limits?: Partial<SessionLimits>;
 }
+
+/** Turn indices used for notice audio, well outside the range of real (non-negative) Sonic turns. */
+const WARNING_TURN = -1;
+const EXPIRED_TURN = -2;
 
 /**
  * Serves Sonic sessions on `/ws`: binary frames in are 16 kHz caller PCM, binary frames out are
  * 24 kHz agent PCM. Text frames carry `HostMessage` out and `ClientMessage` in; `end` ends the
  * session, writes its trace and replies with where it landed.
+ *
+ * Before any session starts: the `code` query parameter must match `accessCode`, and at most
+ * `limits.maxConcurrent` sessions may be open at once. Both checks happen before any Bedrock call.
  */
 export function attachSessions(server: Server, deps: SessionDeps): void {
   const wss = new WebSocketServer({ server, path: '/ws' });
-  wss.on('connection', (socket) => void serve(socket, deps));
+  const limits = { ...DEFAULT_LIMITS, ...deps.limits };
+  let active = 0;
+  wss.on('connection', (socket, request) => {
+    const code = new URL(request.url ?? '', 'http://host').searchParams.get('code');
+    if (code === null) return reject(socket, 4401, 'missing access code');
+    if (code !== deps.accessCode) return reject(socket, 4401, 'wrong access code');
+    if (active >= limits.maxConcurrent) return reject(socket, 4429, 'too many concurrent sessions');
+    active++;
+    void serve(socket, deps, limits).finally(() => {
+      active--;
+    });
+  });
 }
 
-async function serve(socket: WebSocket, { client, writer, rotation }: SessionDeps): Promise<void> {
+function reject(socket: WebSocket, code: number, reason: string): void {
+  socket.send(JSON.stringify({ type: 'rejected', reason } satisfies HostMessage));
+  socket.close(code, reason);
+}
+
+/** Milliseconds of 24 kHz 16-bit mono PCM. */
+function durationMs(pcm: Buffer): number {
+  return Math.round(pcm.length / 2 / (OUTPUT_RATE / 1000));
+}
+
+async function serve(
+  socket: WebSocket,
+  { client, writer, rotation, notices }: SessionDeps,
+  limits: SessionLimits
+): Promise<void> {
   const send = (message: HostMessage) => socket.send(JSON.stringify(message));
   let audioTurn: number | undefined;
   const session = new SonicSession(
@@ -57,19 +120,47 @@ async function serve(socket: WebSocket, { client, writer, rotation }: SessionDep
     },
     rotation
   );
+
+  /** Plays a notice directly on the socket; a fresh `turn` frame follows once Sonic next speaks. */
+  const notify = (pcm: Buffer, turn: number) => {
+    send({ type: 'turn', index: turn });
+    socket.send(pcm);
+    audioTurn = turn;
+  };
+
+  const keepalive = setInterval(() => {
+    if (socket.readyState === socket.OPEN) socket.ping();
+  }, limits.keepaliveMs);
+  const warned = setTimeout(
+    () => notify(notices.warning, WARNING_TURN),
+    Math.max(0, limits.capMs - limits.warnBeforeMs)
+  );
+  const expired = setTimeout(() => {
+    notify(notices.expired, EXPIRED_TURN);
+    setTimeout(() => session.close(), durationMs(notices.expired));
+  }, limits.capMs);
+  const stopTimers = () => {
+    clearInterval(keepalive);
+    clearTimeout(warned);
+    clearTimeout(expired);
+  };
+
   socket.on('message', (data, isBinary) => {
     if (isBinary) return session.sendAudio(data as Buffer);
     const message = JSON.parse(String(data)) as ClientMessage;
-    if (message.type === 'played') session.onPlayed(message.turn, message.ms);
-    if (message.type === 'flushed') session.onFlushed(message.turn, message.ms);
+    if (message.type === 'played' && message.turn >= 0) session.onPlayed(message.turn, message.ms);
+    if (message.type === 'flushed' && message.turn >= 0)
+      session.onFlushed(message.turn, message.ms);
     if (message.type === 'end') session.close();
   });
   socket.on('close', () => session.close());
   try {
     await session.run();
+    stopTimers();
     send({ type: 'trace', path: await writer.write(session.trace()) });
     socket.close();
   } catch (error) {
+    stopTimers();
     console.error(`session ${session.id} failed`, error);
     socket.close(1011, 'session failed');
   }

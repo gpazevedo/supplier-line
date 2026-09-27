@@ -5,7 +5,12 @@ import { createBudget } from './budgets';
 import { createConnect } from './connect';
 import { createGithubRoles } from './github-roles';
 import { createPoStatusLambda } from './po-status-lambda';
-import { createAccessCodeParameter, createRepository, createTracesBucket } from './storage';
+import {
+  createAccessCodeParameter,
+  createConnectIdParameters,
+  createRepository,
+  createTracesBucket,
+} from './storage';
 
 export interface PersistentStackProps extends StackProps {
   /** Receives reaper and budget alerts. A deploy-time context value, never committed. */
@@ -24,6 +29,7 @@ export class PersistentStack extends Stack {
     createTracesBucket(this);
     createAccessCodeParameter(this);
     const connect = createConnect(this, createPoStatusLambda(this));
+    createConnectIdParameters(this, connect.instance.attrId, connect.flow.attrContactFlowArn);
     const roles = createGithubRoles(this, repository);
     new ReaperConstruct(this, 'Reaper', { alertEmail });
     createBudget(this, alertEmail);

@@ -126,6 +126,21 @@ describe('AppStack service', () => {
     });
   });
 
+  it('reads the access code and Connect IDs from the persistent stack over SSM, by name only', () => {
+    const { template } = build();
+    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+      ContainerDefinitions: Match.arrayWith([
+        Match.objectLike({
+          Secrets: Match.arrayWith([
+            Match.objectLike({ Name: 'DEMO_ACCESS_CODE' }),
+            Match.objectLike({ Name: 'CONNECT_INSTANCE_ID' }),
+            Match.objectLike({ Name: 'CONNECT_CONTACT_FLOW_ID' }),
+          ]),
+        }),
+      ]),
+    });
+  });
+
   it('lets the task write traces to the persistent traces bucket', () => {
     const { template } = build();
     template.hasResourceProperties('AWS::IAM::Policy', {
