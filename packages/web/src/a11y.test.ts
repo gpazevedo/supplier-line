@@ -28,12 +28,19 @@ let browser: Browser;
 let baseUrl: string;
 
 beforeAll(async () => {
-  server = await createServer({ root: webRoot, server: { port: 0 }, logLevel: 'silent' });
+  // Vite's default host, 'localhost', is resolved by Node before binding, and only the first
+  // resolved address is bound. On a host where that resolves to the IPv6 loopback (::1) first,
+  // the server would refuse this file's own IPv4 client. Binding the literal sidesteps DNS order.
+  server = await createServer({
+    root: webRoot,
+    server: { port: 0, host: '127.0.0.1' },
+    logLevel: 'silent',
+  });
   await server.listen();
   const address = server.httpServer?.address();
   if (!address || typeof address === 'string')
     throw new Error('dev server did not bind a TCP port');
-  baseUrl = `http://127.0.0.1:${address.port}`;
+  baseUrl = `http://${address.address}:${address.port}`;
   browser = await chromium.launch({ channel: 'chrome' });
 }, TEST_TIMEOUT_MS);
 
