@@ -8,7 +8,15 @@ import type { PlaybackCommand } from './playback-worklet.js';
 /** Caller audio goes up in 32 ms frames of 16 kHz PCM, as the replay sends it. */
 const FRAME_SAMPLES = 512;
 
+/** role="status" is an implicit polite, atomic live region: call-state changes announce themselves. */
+const status = el('p', 'status', 'Not on a call.');
+status.setAttribute('role', 'status');
+
+const transcriptHeading = el('h2', '', 'Transcript');
+transcriptHeading.id = 'transcript-heading';
 const log = el('ol', 'transcript');
+log.setAttribute('aria-live', 'polite');
+log.setAttribute('aria-labelledby', 'transcript-heading');
 const say = (line: string) => log.append(el('li', '', line));
 
 /** Agent audio through the playback worklet; its played and flushed reports go to the host. */
@@ -39,6 +47,7 @@ async function startCapture(socket: WebSocket): Promise<MediaStream> {
 }
 
 async function call(): Promise<() => void> {
+  status.textContent = 'Calling…';
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
   const socket = new WebSocket(`${scheme}://${location.host}/ws`);
   socket.binaryType = 'arraybuffer';
@@ -51,8 +60,12 @@ async function call(): Promise<() => void> {
     if (message.type === 'transcript') say(`${message.role}: ${message.text}`);
     if (message.type === 'trace') say(`Trace written: ${message.path}`);
   };
-  socket.onclose = () => say('Call ended.');
+  socket.onclose = () => {
+    status.textContent = 'Call ended.';
+    say('Call ended.');
+  };
   const mic = await startCapture(socket);
+  status.textContent = 'On a call. Ask for the status of a purchase order.';
   return () => {
     socket.send(JSON.stringify({ type: 'end' }));
     mic.getTracks().forEach((track) => track.stop());
@@ -66,6 +79,7 @@ button.addEventListener('click', async () => {
     hangUp();
     hangUp = undefined;
     button.textContent = 'Call';
+    status.textContent = 'Not on a call.';
     return;
   }
   hangUp = await call();
@@ -78,5 +92,7 @@ document
     el('h1', '', 'Supplier Line softphone'),
     el('p', 'muted', 'Use headphones. Ask for the status of a purchase order.'),
     button,
+    status,
+    transcriptHeading,
     log
   );
