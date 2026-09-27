@@ -9,12 +9,14 @@
 import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { parseArgs } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { pcmFromWav, wavFromPcm } from 'host/src/replay/wav.js';
 import { runClip, type RunClipResult } from 'host/src/replay/session.js';
 import { getPoStatus } from 'tools/src/po-status/index.js';
 import { OUTPUT_RATE } from 'host/src/sonic/events.js';
+import { parseReplayClipsArgs, resolveOutDir } from './replay-clips-args.js';
 
+const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const CLIPS_DIR = new URL('../../../fixtures/clips/', import.meta.url);
 const loadClip = (name: string) => pcmFromWav(readFileSync(new URL(name, CLIPS_DIR)));
 
@@ -26,16 +28,10 @@ function wsUrl(input: string): string {
   return url.toString();
 }
 
-const { values } = parseArgs({
-  options: {
-    url: { type: 'string', default: 'ws://127.0.0.1:8080/ws' },
-    out: { type: 'string', default: 'traces/live' },
-    'long-seconds': { type: 'string', default: '180' },
-  },
-});
-const url = wsUrl(values.url);
-const outDir = values.out;
-const longSeconds = Number(values['long-seconds']);
+const args = parseReplayClipsArgs(process.argv.slice(2));
+const url = wsUrl(args.url);
+const outDir = resolveOutDir(args.out, REPO_ROOT);
+const longSeconds = args.longSeconds;
 const accessCode = process.env.DEMO_ACCESS_CODE;
 
 interface Scenario {
@@ -110,6 +106,8 @@ const shortScenarios: Scenario[] = [
   { name: 'silence', sequence: [silence], check: tracePassCheck },
 ];
 
+// `--long-seconds` (default 180) controls how long the long scenario keeps alternating turns;
+// raise it past the host's ROTATE_AFTER_S to also exercise a session-rotation handover.
 const longScenario: Scenario = {
   name: 'long-repeat',
   sequence: [poStatusA, followupDelivery],
