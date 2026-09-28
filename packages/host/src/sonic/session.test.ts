@@ -168,6 +168,66 @@ describe('SonicSession failure behaviours', () => {
     expect(audio.some((a) => a.pcm.equals(phrases['FH-03'].pcm))).toBe(false);
   });
 
+  it('FH-03 fault: holds real agent audio so the stall reliably fires even when Sonic speaks immediately', async () => {
+    // Reproduces the live bug: with only a tool-call delay, Sonic's own "Let me check that." audio
+    // (unrelated to the delayed tool call) started well inside the 1.5 s stall window, so FH-03
+    // never fired. Holding the real audio back guarantees the stall regardless of what Sonic says.
+    const sc = scriptedClient();
+    const phrases = fakePhrases();
+    const { listener, audio } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases,
+      fillerStallMs: 30,
+      toolTimeoutMs: 10_000,
+      fault: { holdAudioMs: 150 },
+    });
+    await sc.opened;
+
+    callerSaid('u1', 'po dash one oh four eight two').forEach(sc.emit);
+    await wait(10);
+    const realAudio = Buffer.alloc(480, 7);
+    sc.emit({ audioOutput: { contentId: 'a1', content: realAudio.toString('base64') } }); // well inside the 150 ms hold
+    await wait(250); // past both the 30 ms stall window and the 150 ms hold
+    expect(audio.map((a) => a.pcm)).toEqual([phrases['FH-03'].pcm, realAudio]); // filler, then the held audio
+    const trace = session.trace();
+    expect(trace.events).toContainEqual({
+      fh: { id: 'FH-03' },
+      at_ms: expect.any(Number),
+      turn: 0,
+    });
+    session.close();
+  });
+
+  it('FH-03 fault: the hold survives a code read digit by digit across several caller segments', async () => {
+    // Reproduces a second live gap: the fault held audio only from the caller's *first* segment,
+    // so a code read in pieces ("...one?" / "zero four?" / "eight two.") let the hold lapse and
+    // release (nothing yet) before the caller even finished, well before Sonic ever spoke.
+    const sc = scriptedClient();
+    const phrases = fakePhrases();
+    const { listener, audio } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases,
+      fillerStallMs: 10_000,
+      toolTimeoutMs: 10_000,
+      fault: { holdAudioMs: 150 },
+    });
+    await sc.opened;
+
+    callerSaid('u1', 'po dash one').forEach(sc.emit);
+    await wait(40); // less than the 150 ms hold: the caller keeps reading before it lapses
+    callerSaid('u2', 'oh four').forEach(sc.emit);
+    await wait(40);
+    callerSaid('u3', 'eight two').forEach(sc.emit);
+    await wait(40); // still less than 150 ms since the last segment: the hold is still extended
+
+    const realAudio = Buffer.alloc(480, 9);
+    sc.emit({ audioOutput: { contentId: 'a1', content: realAudio.toString('base64') } });
+    await wait(200); // past the 150 ms hold from the last caller segment
+
+    expect(audio).toEqual([{ pcm: realAudio, turn: 0 }]); // held, then released once quiet
+    session.close();
+  });
+
   it('FH-10: fillers, retries once, discards the stale first attempt, and sends one toolResult', async () => {
     const sc = scriptedClient();
     const phrases = fakePhrases();

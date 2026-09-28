@@ -73,14 +73,20 @@ const EXPIRED_TURN = -2;
  * Demo-only fault flag, `?fault=fh01|fh03|fh10` on `/ws` (never enabled by default): forces one of
  * the three failure behaviours to trigger reliably, instead of waiting for a real stream-open
  * failure or a slow lookup. `fh01` makes the Sonic stream fail to open, without any real Bedrock
- * call. `fh03`/`fh10` make the session's first `get_po_status` call wait long enough to trigger
- * their filler; `fh10`'s delay exceeds the tool timeout, so the first attempt times out and the
- * (undelayed) retry answers normally.
+ * call. `fh03` holds the session's first turn's real agent audio back for `FAULT_HOLD_AUDIO_MS`,
+ * so the stall (and hence the filler) happens regardless of what Sonic says or how fast the
+ * lookup is; Sonic sometimes speaks something (e.g. "Let me check that.") well inside the 1.5 s
+ * stall window on its own, which used to make the flag unreliable. `fh10` makes the session's
+ * first `get_po_status` call wait `FAULT_TOOL_DELAY_MS`, past the tool timeout, so the first
+ * attempt times out and the (undelayed) retry answers normally.
  */
-const FAULT_TOOL_DELAYS_MS: Record<'fh03' | 'fh10', number> = { fh03: 2000, fh10: 4000 };
+const FAULT_HOLD_AUDIO_MS = 1800;
+const FAULT_TOOL_DELAY_MS = 4000;
 
-function isToolDelayFault(fault: string | null): fault is 'fh03' | 'fh10' {
-  return fault === 'fh03' || fault === 'fh10';
+function faultFor(flag: string | null): SessionFault {
+  if (flag === 'fh03') return { holdAudioMs: FAULT_HOLD_AUDIO_MS };
+  if (flag === 'fh10') return { toolDelayMs: FAULT_TOOL_DELAY_MS };
+  return {};
 }
 
 /** A client whose stream never opens, for the `fault=fh01` flag; makes no real Bedrock call. */
@@ -132,9 +138,7 @@ async function serve(
 ): Promise<void> {
   const send = (message: HostMessage) => socket.send(JSON.stringify(message));
   let audioTurn: number | undefined;
-  const fault: SessionFault = isToolDelayFault(faultFlag)
-    ? { toolDelayMs: FAULT_TOOL_DELAYS_MS[faultFlag] }
-    : {};
+  const fault = faultFor(faultFlag);
   const session = new SonicSession(
     faultFlag === 'fh01' ? failingClient() : client,
     {

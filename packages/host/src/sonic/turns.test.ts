@@ -134,6 +134,34 @@ it('replays a turn answered from a tool result without the agent reply', () => {
   ]);
 });
 
+it('falls back to speculative text for a segment whose FINAL never arrives (a real Sonic gap)', () => {
+  // Reproduces a live Bedrock trace: three ASSISTANT segments are spoken (SPECULATIVE + full
+  // audio for each), but Sonic never sends a FINAL confirmation for the last one before ending
+  // the completion. `completionEnd` is the signal that no more FINALs are coming.
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of PO-20931?');
+  textBlock(r, 'a1', 'ASSISTANT', SPECULATIVE, 100)('Sentence one.');
+  textBlock(r, 'a2', 'ASSISTANT', SPECULATIVE, 200)('Sentence two.');
+  textBlock(r, 'a3', 'ASSISTANT', SPECULATIVE, 300)('Sentence three.');
+  textBlock(r, 'f1', 'ASSISTANT', FINAL, 400)('Sentence one.');
+  textBlock(r, 'f2', 'ASSISTANT', FINAL, 500)('Sentence two.');
+  // No FINAL ever arrives for "Sentence three."
+  const recovered = r.onCompletionEnd();
+
+  expect(recovered).toEqual(['Sentence three.']);
+  expect(r.turns()[0]?.assistant.final_text).toBe('Sentence one. Sentence two. Sentence three.');
+});
+
+it('completionEnd is a no-op once every segment already has its FINAL', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of PO-10482?');
+  textBlock(r, 'a1', 'ASSISTANT', SPECULATIVE, 100)('Purchase order one.');
+  textBlock(r, 'f1', 'ASSISTANT', FINAL, 200)('Purchase order one.');
+
+  expect(r.onCompletionEnd()).toEqual([]);
+  expect(r.turns()[0]?.assistant.final_text).toBe('Purchase order one.');
+});
+
 it('records a fallback phrase as a whole turn (FH-01)', () => {
   const r = new TurnRecorder();
   const turn = r.onFallback("Sorry, this line can't take your call right now.", 9600, 40);

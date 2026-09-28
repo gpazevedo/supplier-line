@@ -18,9 +18,17 @@ const READING_TIMEOUT_MS = 4000;
 /** How long with no agent audio after the caller stops speaking before FH-03 plays a filler. */
 export const FH03_STALL_MS = 1500;
 
-/** Forces the session's first `get_po_status` call to wait this long (FH-03/FH-10 fault flag). */
+/** Fault flags that force a failure behaviour to trigger reliably, for the demo video. */
 export interface SessionFault {
+  /** FH-10: forces the session's first `get_po_status` call to wait this long. */
   toolDelayMs?: number;
+  /**
+   * FH-03: holds back the session's first turn's real agent audio for this long past the
+   * caller's last segment, so the stall (and hence the filler) reliably happens regardless of
+   * what Sonic says or how fast the lookup is. Held audio is replayed, in order, once released,
+   * so nothing Sonic says is lost — only delayed.
+   */
+  holdAudioMs?: number;
 }
 
 export interface SessionOptions {
@@ -77,8 +85,15 @@ export class SonicSession {
   /** True once the very first connection's open failure has been handled (FH-01), so a second
    * report of the same failure (`opened` rejecting and `done` rejecting) is not handled twice. */
   private openFailed = false;
-  /** One-shot fault delay (FH-03/FH-10), consumed by the session's first tool call. */
+  /** One-shot fault delay (FH-10), consumed by the session's first tool call. */
   private faultToolDelayMs?: number;
+  /** Fault hold window (FH-03), used once per session. */
+  private readonly faultHoldAudioMs?: number;
+  /** True once a hold has been armed for some turn, so a later turn never starts a new one. */
+  private audioHoldUsed = false;
+  /** Real agent audio buffered for `audioHold.turn` while the FH-03 fault hold is active; the
+   * window resets on every caller segment in that turn, like the filler timer's own stall clock. */
+  private audioHold?: { turn: number; chunks: Body[]; timer: NodeJS.Timeout };
   /** Code of the PO a lookup found most recently. */
   private lastOrder?: string;
 
@@ -89,6 +104,7 @@ export class SonicSession {
     private readonly options: SessionOptions
   ) {
     this.faultToolDelayMs = options.fault?.toolDelayMs;
+    this.faultHoldAudioMs = options.fault?.holdAudioMs;
     this.filler = new FillerTimer(options.fillerStallMs ?? FH03_STALL_MS, {
       onFire: (turn) => this.onFillerFire(turn),
     });
@@ -119,6 +135,10 @@ export class SonicSession {
   close(): void {
     this.ending = true;
     this.filler.stop(); // so a pending or later-scheduled FH-03 timer can't fire after close
+    if (this.audioHold) {
+      clearTimeout(this.audioHold.timer); // so a pending audio-hold release can't fire after close
+      this.audioHold = undefined;
+    }
     this.rotator.close();
   }
 
@@ -255,17 +275,61 @@ export class SonicSession {
       if (name === 'toolUse') console.warn(`session ${this.id}: toolUse on a retired connection`);
       return;
     }
+    if (process.env.DEBUG_EVENTS) this.log(`RAW ${name} ${JSON.stringify(body).slice(0, 300)}`);
+    if (name === 'audioOutput') {
+      if (this.isHoldingAudio()) this.audioHold?.chunks.push(body);
+      else this.processAudioOutput(body);
+      return;
+    }
     this.recorder.onEvent(name, body, this.elapsedMs());
     if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'audioOutput') {
-      this.filler.audio();
-      this.onAudio(String(body.content));
-    }
     if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
       this.listener.onInterrupted(this.recorder.currentTurn);
+    if (name === 'completionEnd') {
+      this.recorder
+        .onCompletionEnd()
+        .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
+    }
     this.rotator.onOutput(from, name, body);
+  }
+
+  /** Runs one `audioOutput` event through the normal pipeline (ledger, filler cancel, playback). */
+  private processAudioOutput(body: Body): void {
+    this.recorder.onEvent('audioOutput', body, this.elapsedMs());
+    this.filler.audio();
+    this.onAudio(String(body.content));
+    this.rotator.onOutput(this.rotator.current, 'audioOutput', body);
+  }
+
+  private isHoldingAudio(): boolean {
+    return this.audioHold !== undefined && this.audioHold.turn === this.recorder.currentTurn;
+  }
+
+  /**
+   * FH-03 fault: (re)starts buffering `turn`'s real agent audio for `faultHoldAudioMs`, so it
+   * survives a caller reading a code digit by digit across several segments, the same way the
+   * filler timer's own stall clock does. Used once per session: a later turn never starts a hold.
+   */
+  private armAudioHold(turn: number): void {
+    const holdMs = this.faultHoldAudioMs;
+    if (holdMs === undefined) return;
+    if (this.audioHold?.turn === turn) {
+      clearTimeout(this.audioHold.timer);
+      this.audioHold.timer = setTimeout(() => this.releaseAudioHold(), holdMs);
+      return;
+    }
+    if (this.audioHoldUsed) return;
+    this.audioHoldUsed = true;
+    this.audioHold = { turn, chunks: [], timer: setTimeout(() => this.releaseAudioHold(), holdMs) };
+  }
+
+  /** Replays the held audio, in order, once the fault hold's window has passed. */
+  private releaseAudioHold(): void {
+    const hold = this.audioHold;
+    this.audioHold = undefined;
+    hold?.chunks.forEach((body) => this.processAudioOutput(body));
   }
 
   private log(line: string): void {
@@ -294,7 +358,11 @@ export class SonicSession {
     if (role !== 'USER' && role !== 'ASSISTANT') return;
     if (role === 'USER') {
       this.log(`caller ${JSON.stringify(text)}`);
-      if (this.recorder.currentTurn !== undefined) this.filler.caller(this.recorder.currentTurn);
+      const turn = this.recorder.currentTurn;
+      if (turn !== undefined) {
+        this.filler.caller(turn);
+        this.armAudioHold(turn);
+      }
     }
     this.listener.onTranscript(role, text);
   }

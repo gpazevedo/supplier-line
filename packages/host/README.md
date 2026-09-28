@@ -88,16 +88,37 @@ Three phrases captured by S15 (`assets/phrases/`, voice Matthew, 24 kHz) cover t
 
 **Fault flags**, `?fault=fh01|fh03|fh10` on `/ws` (never on by default, documented here only):
 forces one of the three behaviours to trigger reliably for the demo video, instead of waiting for a
-real stream-open failure or a slow lookup. `fh01` swaps in a client whose stream never opens, with
-no real Bedrock call. `fh03` and `fh10` make the session's first `get_po_status` call wait 2 s or
-4 s (`sessions.ts`'s `FAULT_TOOL_DELAYS_MS`) before running for real; `fh10`'s delay exceeds the 3 s
-tool timeout, so the first attempt times out and the (undelayed) retry answers normally, giving a
-believable filler-then-retry-then-answer demo. Try, e.g.:
+real stream-open failure or a slow lookup.
+
+- `fh01` swaps in a client whose stream never opens, with no real Bedrock call.
+- `fh03` holds the session's first turn's real agent audio back for `FAULT_HOLD_AUDIO_MS` (1.8 s),
+  replaying it afterward in order. Delaying the tool call alone isn't reliable: Sonic sometimes
+  speaks "Let me check that." well inside the 1.5 s stall window on its own, before the tool call
+  even resolves, which used to make the flag a no-op. The hold resets on every caller segment (a
+  code read digit by digit spans several), the same way the filler timer's own stall clock does.
+- `fh10` makes the session's first `get_po_status` call wait `FAULT_TOOL_DELAY_MS` (4 s), past the
+  3 s tool timeout, so the first attempt times out and the (undelayed) retry answers normally,
+  giving a believable filler-then-retry-then-answer demo.
+
+Try, e.g.:
 
 ```bash
 DEMO_ACCESS_CODE=let-me-in pnpm --filter host replay "$PWD/fixtures/clips/po-status-a.wav" PO-10482 \
   --url "ws://127.0.0.1:8080/ws?fault=fh10"   # or fh01 / fh03; --url already carries any query string through to `code`
 ```
+
+`DEBUG_EVENTS=1` on the host logs every raw Sonic event (name and a truncated body) per session;
+useful for diagnosing a live Bedrock quirk without guessing, e.g. the one below.
+
+**A real Sonic gap.** For a long, multi-sentence tool-based reply, Bedrock sometimes never sends a
+FINAL confirmation for the trailing sentence's SPECULATIVE text, even though it fully generates and
+plays that sentence's audio (its own `contentEnd` even reports `stopReason: END_TURN`). Found live
+replaying `po-status-b` (PO-20931, a four-sentence "delayed" rendering) repeatedly with
+`DEBUG_EVENTS=1`: the trailing SPECULATIVE text arrives, its audio plays in full, and then nothing
+more comes for that segment before Sonic's own `completionEnd` — not a client-side timeout, since
+waiting longer doesn't help. `sonic/turns.ts` tracks SPECULATIVE ASSISTANT segments still awaiting
+their FINAL per turn; on `completionEnd`, any still pending fall back to their speculative text, so
+neither the trace's `assistant.final_text` nor the live transcript is missing what the caller heard.
 
 ## Build
 
