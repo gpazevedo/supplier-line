@@ -81,6 +81,25 @@ describe('GitHub role permissions', () => {
     }
   });
 
+  it('lets only the demo role upload the web pages, to the site bucket only', () => {
+    const s3 = policyOf('GithubDemoRole').filter((s) =>
+      [s.Action].flat().some((a) => a.startsWith('s3:'))
+    );
+    expect(s3.map((s) => [s.Action].flat().sort())).toEqual([
+      ['s3:ListBucket'],
+      ['s3:DeleteObject', 's3:PutObject'],
+    ]);
+    expect(JSON.stringify(s3[0].Resource)).toMatch(
+      /:::supplier-line-site-",\{"Ref":"AWS::AccountId"\}\]/
+    );
+    expect(JSON.stringify(s3[1].Resource)).toMatch(
+      /:::supplier-line-site-",\{"Ref":"AWS::AccountId"\},"\/\*"\]/
+    );
+    for (const prefix of ['GithubTeardownRole', 'GithubInfraRole']) {
+      expect(actionsOf(policyOf(prefix)).some((a) => a.startsWith('s3:'))).toBe(false);
+    }
+  });
+
   it('gives the teardown role no CDK bootstrap roles and no way to create or update a stack', () => {
     const actions = actionsOf(policyOf('GithubTeardownRole'));
     expect(actions).not.toContain('sts:AssumeRole');

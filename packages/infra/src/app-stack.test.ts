@@ -218,6 +218,7 @@ describe('AppStack CloudFront', () => {
   it('keeps the site bucket private and deletable with the stack', () => {
     const { template } = build();
     template.hasResourceProperties('AWS::S3::Bucket', {
+      BucketName: { 'Fn::Join': ['', ['supplier-line-site-', { Ref: 'AWS::AccountId' }]] },
       PublicAccessBlockConfiguration: {
         BlockPublicAcls: true,
         BlockPublicPolicy: true,
