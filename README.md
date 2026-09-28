@@ -23,6 +23,7 @@ Known issues:
 
 - Sonic still occasionally mishears a code (for example it hears only three digits). The host holds any lookup the caller has not finished reading, and the check digit turns every mishearing into "please say it again", so no other order's data is spoken. Across rotations, codes and follow-ups are now answered through the tool.
 - Before H3: `demo-up`'s smoke job runs the trace checks on the committed fixtures only. The deployed host writes its traces to the traces bucket, so the live traces are not checked yet.
+- S18: the Connect calling page (`packages/web/connect.html`) is built and axe-checked, but a real call and the flow's error branch need a human with a mic and speakers (see `packages/web/README.md`); there's no automated end-to-end check for the Connect path. `/api/connect/start` also has no access-code check today, unlike `/ws`.
 
 ## Run it locally
 
