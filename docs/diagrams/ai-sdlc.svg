@@ -150,7 +150,7 @@
     <text class="s" x="280" y="680" text-anchor="middle">S02–S11, S21</text>
     <text class="m s" x="280" y="710" text-anchor="middle">core and infra</text>
 
-    <path class="hu wip" d="M365 646 L387 668 L365 690 L343 668 z"/>
+    <path class="hu" d="M365 646 L387 668 L365 690 L343 668 z"/>
     <text class="s" x="365" y="672" text-anchor="middle" font-weight="700">H0.2</text>
     <text class="m s" x="365" y="710" text-anchor="middle">stack live</text>
 
@@ -178,7 +178,7 @@
     <text class="s" x="822" y="672" text-anchor="middle" font-weight="700">H3</text>
     <text class="m s" x="822" y="710" text-anchor="middle">demo-up 1 h</text>
 
-    <rect class="ai wip" x="864" y="646" width="76" height="44" rx="8"/>
+    <rect class="ai" x="864" y="646" width="76" height="44" rx="8"/>
     <text class="s" x="902" y="664" text-anchor="middle" font-weight="700">Phase 5</text>
     <text class="s" x="902" y="680" text-anchor="middle">S20</text>
     <text class="m s" x="902" y="710" text-anchor="middle">README, ADRs</text>
