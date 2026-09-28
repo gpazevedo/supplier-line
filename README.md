@@ -8,17 +8,17 @@ A caller says a code such as "P O one zero four eight two". The agent looks it u
 
 ## Status
 
-| Area                                                                          | State       |
-| ----------------------------------------------------------------------------- | ----------- |
-| PO data, renderings, `get_po_status`, traces and trace checks, viewer         | Built       |
-| Session host: Sonic streaming, barge-in, playback ledger, session rotation    | Built       |
-| Softphone and trace viewer, WCAG 2.2 AA checked with axe                      | Built       |
-| Caller-clip player, fixed phrases                                             | Built       |
-| CDK persistent and app stacks, reaper, GitHub workflows                       | Built       |
-| Access code, 15-minute cap, 2 concurrent sessions, `/api/connect/start` (S17) | Built       |
-| Failure behaviours: fallback phrase, filler at 1.5 s, tool retry (S14)        | Built       |
-| Connect calling page (S18)                                                    | In progress |
-| Final review (S19), README and ADRs (S20)                                     | Planned     |
+| Area                                                                          | State   |
+| ----------------------------------------------------------------------------- | ------- |
+| PO data, renderings, `get_po_status`, traces and trace checks, viewer         | Built   |
+| Session host: Sonic streaming, barge-in, playback ledger, session rotation    | Built   |
+| Softphone and trace viewer, WCAG 2.2 AA checked with axe                      | Built   |
+| Caller-clip player, fixed phrases                                             | Built   |
+| CDK persistent and app stacks, reaper, GitHub workflows                       | Built   |
+| Access code, 15-minute cap, 2 concurrent sessions, `/api/connect/start` (S17) | Built   |
+| Failure behaviours: fallback phrase, filler at 1.5 s, tool retry (S14)        | Built   |
+| Connect calling page (S18), pending a human's audio check                     | Built   |
+| Final review (S19), README and ADRs (S20)                                     | Planned |
 
 Known issues:
 
