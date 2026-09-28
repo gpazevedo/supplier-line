@@ -42,7 +42,7 @@ export class ReaperConstruct extends Construct {
     this.grantReaping();
     this.alerts.grantPublish(this.function);
     this.addTriggers();
-    this.addErrorAlarm();
+    this.addAlarms();
   }
 
   /** The role has no managed policies: for logs it may write only to this log group. */
@@ -118,9 +118,13 @@ export class ReaperConstruct extends Construct {
     });
   }
 
-  /** The SSL-only topic policy replaces SNS's default one, so the alarm needs its own Allow. */
-  private addErrorAlarm() {
-    const alarm = this.function
+  /**
+   * Two alarms to the alerts topic: the reaper erred, or it hasn't run for 30 minutes (three
+   * schedule periods; a disabled rule or zero concurrency makes no errors, only silence). The
+   * SSL-only topic policy replaces SNS's default one, so the alarms need their own Allow.
+   */
+  private addAlarms() {
+    const errors = this.function
       .metricErrors({ period: Duration.minutes(10), statistic: 'Sum' })
       .createAlarm(this, 'ErrorAlarm', {
         alarmDescription:
@@ -130,14 +134,24 @@ export class ReaperConstruct extends Construct {
         comparisonOperator: ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
         treatMissingData: TreatMissingData.NOT_BREACHING,
       });
-    alarm.addAlarmAction(new SnsAction(this.alerts));
+    const heartbeat = this.function
+      .metricInvocations({ period: Duration.minutes(30), statistic: 'Sum' })
+      .createAlarm(this, 'HeartbeatAlarm', {
+        alarmDescription:
+          'The supplier-line reaper Lambda has not run for 30 minutes; stacks may outlive their window.',
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: ComparisonOperator.LESS_THAN_THRESHOLD,
+        treatMissingData: TreatMissingData.BREACHING,
+      });
+    for (const alarm of [errors, heartbeat]) alarm.addAlarmAction(new SnsAction(this.alerts));
     this.alerts.addToResourcePolicy(
       new PolicyStatement({
         sid: 'AllowErrorAlarmPublish',
         principals: [new ServicePrincipal('cloudwatch.amazonaws.com')],
         actions: ['sns:Publish'],
         resources: [this.alerts.topicArn],
-        conditions: { ArnEquals: { 'aws:SourceArn': alarm.alarmArn } },
+        conditions: { ArnEquals: { 'aws:SourceArn': [errors.alarmArn, heartbeat.alarmArn] } },
       })
     );
   }

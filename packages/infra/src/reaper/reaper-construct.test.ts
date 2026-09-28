@@ -58,7 +58,7 @@ describe('ReaperConstruct alerts', () => {
 });
 
 describe('ReaperConstruct alert topic policy', () => {
-  it('lets the error alarm publish, since the SSL-only policy replaces the default one', () => {
+  it('lets both alarms publish, since the SSL-only policy replaces the default one', () => {
     template.hasResourceProperties('AWS::SNS::TopicPolicy', {
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -70,9 +70,10 @@ describe('ReaperConstruct alert topic policy', () => {
             Resource: { Ref: Match.stringLikeRegexp('^ReaperAlerts') },
             Condition: {
               ArnEquals: {
-                'aws:SourceArn': {
-                  'Fn::GetAtt': [Match.stringLikeRegexp('^ReaperErrorAlarm'), 'Arn'],
-                },
+                'aws:SourceArn': [
+                  { 'Fn::GetAtt': [Match.stringLikeRegexp('^ReaperErrorAlarm'), 'Arn'] },
+                  { 'Fn::GetAtt': [Match.stringLikeRegexp('^ReaperHeartbeatAlarm'), 'Arn'] },
+                ],
               },
             },
           },
@@ -96,6 +97,25 @@ describe('ReaperConstruct error alarm', () => {
       Threshold: 1,
       ComparisonOperator: 'GreaterThanOrEqualToThreshold',
       TreatMissingData: 'notBreaching',
+      AlarmActions: [{ Ref: Match.stringLikeRegexp('^ReaperAlerts') }],
+    });
+  });
+});
+
+describe('ReaperConstruct heartbeat alarm', () => {
+  it('alarms when the reaper has not run for three schedule periods, so it cannot fail silently', () => {
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      Namespace: 'AWS/Lambda',
+      MetricName: 'Invocations',
+      Dimensions: [
+        { Name: 'FunctionName', Value: { Ref: Match.stringLikeRegexp('^ReaperFunction') } },
+      ],
+      Statistic: 'Sum',
+      Period: 1800,
+      EvaluationPeriods: 1,
+      Threshold: 1,
+      ComparisonOperator: 'LessThanThreshold',
+      TreatMissingData: 'breaching',
       AlarmActions: [{ Ref: Match.stringLikeRegexp('^ReaperAlerts') }],
     });
   });
