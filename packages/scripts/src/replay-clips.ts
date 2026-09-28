@@ -1,10 +1,12 @@
 /**
  * Caller-clip player: runs the five short scenarios and one long scenario from H1's clips against
- * a local or deployed host, writing a trace per scenario and reporting pass/fail. `--url` accepts
- * either a full `ws(s)://.../ws` endpoint or a bare `http(s)://` site URL, which is normalised to
- * its `/ws` WebSocket route. `DEMO_ACCESS_CODE`, when set, is sent as a `code` query parameter,
- * which the host checks on connect (S17).
- * Usage: `pnpm --filter scripts run replay-clips -- --url <url> --out <dir> [--long-seconds n]`.
+ * a local or deployed host, saving the trace the host returns for each scenario as
+ * `<out>/<scenario>.trace.json` (for `pnpm check:traces <out>`) and reporting pass/fail. `--url`
+ * accepts either a full `ws(s)://.../ws` endpoint or a bare `http(s)://` site URL, which is
+ * normalised to its `/ws` WebSocket route. `DEMO_ACCESS_CODE`, when set, is sent as a `code` query
+ * parameter, which the host checks on connect (S17).
+ * Usage: `pnpm --filter scripts run replay-clips -- --url <url> --out <dir> [--long-seconds n]
+ * [--require-rotation]`.
  */
 import { readFileSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -15,6 +17,7 @@ import { runClip, type RunClipResult } from 'host/src/replay/session.js';
 import { getPoStatus } from 'tools/src/po-status/index.js';
 import { OUTPUT_RATE } from 'host/src/sonic/events.js';
 import { parseReplayClipsArgs, resolveOutDir } from './replay-clips-args.js';
+import { rotationCheck } from './rotation-check.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const CLIPS_DIR = new URL('../../../fixtures/clips/', import.meta.url);
@@ -107,12 +110,13 @@ const shortScenarios: Scenario[] = [
 ];
 
 // `--long-seconds` (default 180) controls how long the long scenario keeps alternating turns;
-// raise it past the host's ROTATE_AFTER_S to also exercise a session-rotation handover.
+// raise it past the host's ROTATE_AFTER_S to also exercise a session-rotation handover, and pass
+// `--require-rotation` to fail the scenario unless its trace shows one (the live smoke job does).
 const longScenario: Scenario = {
   name: 'long-repeat',
   sequence: [poStatusA, followupDelivery],
   loopForMs: longSeconds * 1000,
-  check: tracePassCheck,
+  check: (result) => (args.requireRotation ? rotationCheck(result.trace) : tracePassCheck(result)),
 };
 
 async function runScenario(scenario: Scenario): Promise<boolean> {
@@ -131,6 +135,12 @@ async function runScenario(scenario: Scenario): Promise<boolean> {
     await writeFile(
       join(outDir, `${scenario.name}.agent.wav`),
       wavFromPcm(result.agentAudio, OUTPUT_RATE)
+    );
+  }
+  if (result.trace) {
+    await writeFile(
+      join(outDir, `${scenario.name}.trace.json`),
+      JSON.stringify(result.trace, null, 2)
     );
   }
   const { pass, detail } = await scenario.check(result);

@@ -7,13 +7,14 @@ describe('parseReplayClipsArgs', () => {
       url: 'ws://x/ws',
       out: 'dir',
       longSeconds: 180,
+      requireRotation: false,
     });
   });
 
   it('tolerates the leading -- that `pnpm run <script> -- <args>` forwards unstripped', () => {
     expect(
       parseReplayClipsArgs(['--', '--url', 'ws://x/ws', '--out', 'dir', '--long-seconds', '90'])
-    ).toEqual({ url: 'ws://x/ws', out: 'dir', longSeconds: 90 });
+    ).toEqual({ url: 'ws://x/ws', out: 'dir', longSeconds: 90, requireRotation: false });
   });
 
   it('applies defaults with no args', () => {
@@ -21,6 +22,14 @@ describe('parseReplayClipsArgs', () => {
       url: 'ws://127.0.0.1:8080/ws',
       out: 'traces/live',
       longSeconds: 180,
+      requireRotation: false,
+    });
+  });
+
+  it('parses --require-rotation, which the live smoke job sets', () => {
+    expect(parseReplayClipsArgs(['--long-seconds', '420', '--require-rotation'])).toMatchObject({
+      longSeconds: 420,
+      requireRotation: true,
     });
   });
 });

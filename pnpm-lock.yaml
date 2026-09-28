@@ -276,6 +276,9 @@ importers:
       tools:
         specifier: workspace:^
         version: link:../tools
+      traces:
+        specifier: workspace:^
+        version: link:../traces
       tsx:
         specifier: ^4.23.15
         version: 4.23.15

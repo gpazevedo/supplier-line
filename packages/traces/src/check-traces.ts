@@ -19,8 +19,11 @@ function checkFile(path: string): Failure[] {
 
 const formatFailure = (f: Failure) => `  ${f.check} (${f.where}): ${f.message}`;
 
-/** Runs the acceptance checks on every `.json` trace in the given directories. */
-export function checkTraces(dirs: string[]): CheckResult {
+/**
+ * Runs the acceptance checks on every `.json` trace in the given directories. With `requireTraces`
+ * (a live run's own traces), finding none is a failure, so an empty run can't pass.
+ */
+export function checkTraces(dirs: string[], { requireTraces = false } = {}): CheckResult {
   const files = dirs.filter(existsSync).flatMap((dir) =>
     readdirSync(dir)
       .filter((name) => name.endsWith('.json'))
@@ -35,5 +38,6 @@ export function checkTraces(dirs: string[]): CheckResult {
     lines.push(`FAIL ${basename(file)}`, ...failures.map(formatFailure));
   }
   lines.push(`${files.length} traces, ${failed} failed`);
-  return { ok: failed === 0, report: lines.join('\n') };
+  const missing = requireTraces && files.length === 0;
+  return { ok: failed === 0 && !missing, report: lines.join('\n') };
 }

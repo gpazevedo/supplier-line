@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
-import type { TraceWriter } from 'traces/src/index.js';
+import type { Trace, TraceWriter } from 'traces/src/index.js';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { FixedPhrases } from './phrases/fixed.js';
 import { OUTPUT_RATE } from './sonic/events.js';
@@ -10,14 +10,16 @@ import { SonicSession, type SessionFault } from './sonic/session.js';
 /**
  * Messages the host sends as JSON text frames; agent audio goes out as binary frames. A `turn`
  * marker precedes the first audio of each turn; `flush` means drop all queued agent audio, and
- * names the interrupted turn, which may not have sent any audio yet. `rejected` is sent just
- * before the socket closes without a session ever starting (S17).
+ * names the interrupted turn, which may not have sent any audio yet. `trace` carries the finished
+ * session's own trace and where it was written, so a remote caller (the live smoke job) can check
+ * it without AWS access. `rejected` is sent just before the socket closes without a session ever
+ * starting (S17).
  */
 export type HostMessage =
   | { type: 'transcript'; role: 'USER' | 'ASSISTANT'; text: string }
   | { type: 'turn'; index: number }
   | { type: 'flush'; turn?: number }
-  | { type: 'trace'; path: string }
+  | { type: 'trace'; path: string; trace: Trace }
   | { type: 'rejected'; reason: string };
 
 /**
@@ -200,7 +202,8 @@ async function serve(
   try {
     await session.run();
     stopTimers();
-    send({ type: 'trace', path: await writer.write(session.trace()) });
+    const trace = session.trace();
+    send({ type: 'trace', path: await writer.write(trace), trace });
     socket.close();
   } catch (error) {
     stopTimers();

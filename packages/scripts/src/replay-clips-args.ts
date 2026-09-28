@@ -5,6 +5,8 @@ export interface ReplayClipsArgs {
   url: string;
   out: string;
   longSeconds: number;
+  /** Fail the long scenario unless its trace shows an FH-05 rotation. */
+  requireRotation: boolean;
 }
 
 /**
@@ -20,9 +22,15 @@ export function parseReplayClipsArgs(argv: string[]): ReplayClipsArgs {
       url: { type: 'string', default: 'ws://127.0.0.1:8080/ws' },
       out: { type: 'string', default: 'traces/live' },
       'long-seconds': { type: 'string', default: '180' },
+      'require-rotation': { type: 'boolean', default: false },
     },
   });
-  return { url: values.url, out: values.out, longSeconds: Number(values['long-seconds']) };
+  return {
+    url: values.url,
+    out: values.out,
+    longSeconds: Number(values['long-seconds']),
+    requireRotation: values['require-rotation'],
+  };
 }
 
 /**

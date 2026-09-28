@@ -199,3 +199,17 @@ it('ignores a text frame that is not JSON, and still ends the session cleanly', 
   await rec.end();
   expect(rec.messages).toContainEqual(expect.objectContaining({ type: 'trace' }));
 });
+
+it('sends the finished trace itself with where it landed, so a remote caller can check it', async () => {
+  const { client } = fakeClient();
+  attachSessions(server, { ...deps, client });
+  const rec = new Recorder(`${base}?code=${ACCESS_CODE}`);
+  await rec.end();
+  const message = rec.messages.find((m) => (m as { type: string }).type === 'trace') as {
+    path: string;
+    trace: { session_id: string; front_door: string };
+  };
+  expect(message.path).toBe('traces/fake.json');
+  expect(message.trace.front_door).toBe('softphone');
+  expect(message.trace.session_id).toEqual(expect.any(String));
+});

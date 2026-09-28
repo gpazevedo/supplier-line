@@ -6,6 +6,7 @@
  */
 import { setTimeout as sleep } from 'node:timers/promises';
 import { WebSocket } from 'ws';
+import type { Trace } from 'traces/src/index.js';
 import type { HostMessage } from '../sessions.js';
 import { INPUT_RATE } from '../sonic/events.js';
 import { ReplayPlayer } from './player.js';
@@ -33,6 +34,8 @@ export interface RunClipOptions {
 
 export interface RunClipResult {
   tracePath?: string;
+  /** The session's trace, as the host sent it when the session ended. */
+  trace?: Trace;
   agentAudio: Buffer;
   /** Trimmed transcript text, in order, prefixed by role. */
   transcript: { role: 'USER' | 'ASSISTANT'; text: string }[];
@@ -61,6 +64,7 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
   const agentAudio: Buffer[] = [];
   const transcript: RunClipResult['transcript'] = [];
   let tracePath: string | undefined;
+  let trace: Trace | undefined;
   let flushCount = 0;
   let lastHeardAt = 0;
   let heardSinceClip = false;
@@ -88,7 +92,7 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     }
     const message = JSON.parse(String(data)) as HostMessage;
     if (message.type === 'rejected') rejectedReason = message.reason;
-    if (message.type === 'trace') tracePath = message.path;
+    if (message.type === 'trace') [tracePath, trace] = [message.path, message.trace];
     if (message.type === 'turn') player.startTurn(message.index);
     if (message.type === 'flush') {
       flushCount++;
@@ -152,5 +156,12 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
   socket.send(JSON.stringify({ type: 'end' }));
   await new Promise<void>((resolve) => socket.once('close', () => resolve()));
 
-  return { tracePath, agentAudio: Buffer.concat(agentAudio), transcript, flushCount, turnsSent };
+  return {
+    tracePath,
+    trace,
+    agentAudio: Buffer.concat(agentAudio),
+    transcript,
+    flushCount,
+    turnsSent,
+  };
 }
