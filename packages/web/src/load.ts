@@ -15,17 +15,3 @@ export async function loadFile(file: File): Promise<Trace> {
     });
   }
 }
-
-/** The host's GET /api/traces: a JSON array of trace ids. */
-export async function listHostTraces(): Promise<string[]> {
-  const response = await fetch('/api/traces');
-  if (!response.ok) throw new Error(`GET /api/traces returned ${response.status}`);
-  return response.json();
-}
-
-/** The host's GET /api/traces/:id. */
-export async function loadHostTrace(id: string): Promise<Trace> {
-  const response = await fetch(`/api/traces/${encodeURIComponent(id)}`);
-  if (!response.ok) throw new Error(`GET /api/traces/${id} returned ${response.status}`);
-  return parseTraceText(await response.text());
-}

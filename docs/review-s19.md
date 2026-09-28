@@ -118,11 +118,11 @@ Status marks how each finding ended on this branch: **fixed** (with the tests na
 
 - **Where:** `packages/infra/src/persistent/connect.ts:40`; `cdk synth` warns that it "will be removed in the next major release". Replaced with `addResourceDependency`.
 
-### S8. The viewer's host-trace picker calls an endpoint that doesn't exist (open, for S20)
+### S8. The viewer's host-trace picker calls an endpoint that doesn't exist (fixed in S20)
 
 - **Where:** `packages/web/src/load.ts:19-31`, `packages/web/src/main.ts:32-39`.
 - **Evidence:** the host serves only `/health`, `/ws` and `/api/connect/start`, so the picker never appears (its errors are swallowed). The plan says the viewer reads "local files or the host's `/api/traces`". With B5, the softphone gets each trace at hang-up. Serving S3 traces from the host would need `s3:GetObject` and `s3:ListBucket` on the task role, and would show every caller's traces to anyone with the code.
-- **Proposal:** remove the picker and say the viewer opens files. That's S20's call when it checks claims against the code.
+- **Fix:** removed `listHostTraces`/`loadHostTrace` and the host picker from `packages/web/src/load.ts` and `main.ts`. The viewer opens dropped or picked files only; the softphone already saves the caller's own trace to disk at hang-up (B5), and Connect calls have no trace to browse this way.
 
 ## Notes
 

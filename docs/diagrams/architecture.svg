@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" role="img" aria-labelledby="t d">
   <title id="t">Supplier Line architecture</title>
-  <desc id="d">Browser pages reach CloudFront, which serves the site from S3 and forwards WebSocket and API traffic to an ALB and a Fargate session host that streams to Amazon Nova 2 Sonic on Bedrock. A persistent stack holds ECR, the traces bucket, the access code, Connect with a Lex bot and PO Lambda, the reaper, alerts and GitHub OIDC roles used by GitHub Actions. Dashed items are planned (S18).</desc>
+  <desc id="d">Browser pages reach CloudFront, which serves the site from S3 and forwards WebSocket and API traffic to an ALB and a Fargate session host that streams to Amazon Nova 2 Sonic on Bedrock. A persistent stack holds ECR, the traces bucket, the access code, Connect with a Lex bot and PO Lambda, the reaper, alerts and GitHub OIDC roles used by GitHub Actions. Everything shown is built; the app stack itself has not yet been deployed (verified at H3).</desc>
   <style>
     svg { --bg:#ffffff; --ink:#1f2328; --muted:#59636e; --line:#8c959f; --frame:#d0d7de;
           --web:#ddf4ff; --web-s:#0969da; --aws:#fff1e5; --aws-s:#bc4c00; --ai:#efe9ff; --ai-s:#6639ba;
@@ -23,9 +23,7 @@
     .ai { fill: var(--ai); stroke: var(--ai-s); stroke-width: 1.5; }
     .ci { fill: var(--ci); stroke: var(--ci-s); stroke-width: 1.5; }
     .note { fill: var(--note); stroke: var(--frame); stroke-width: 1.2; }
-    .plan { stroke-dasharray: 5 4; fill: var(--bg); }
     .arrow { fill: none; stroke: var(--line); stroke-width: 1.8; marker-end: url(#a); }
-    .darrow { fill: none; stroke: var(--line); stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#a); }
     .kill { fill: none; stroke: var(--gd-s); stroke-width: 1.8; stroke-dasharray: 6 4; marker-end: url(#ar); }
     .ah { fill: var(--line); }
     .ahr { fill: var(--gd-s); }
@@ -37,10 +35,6 @@
   <rect class="bg" width="1200" height="850"/>
 
   <text class="h1" x="40" y="44">Supplier Line architecture (AWS us-east-1)</text>
-  <g transform="translate(870 30)">
-    <path class="arrow" d="M0 8 H40"/><text class="m" x="48" y="12">built</text>
-    <path class="darrow" d="M110 8 H150"/><text class="m" x="158" y="12">planned (S18)</text>
-  </g>
 
   <!-- Browser -->
   <rect class="frame" x="40" y="80" width="220" height="330" rx="12"/>
@@ -53,7 +47,7 @@
   <text class="t" x="70" y="228">Trace viewer</text>
   <text x="70" y="248">planned, generated,</text>
   <text x="70" y="264">heard per turn</text>
-  <rect class="web plan" x="56" y="290" width="188" height="100" rx="8"/>
+  <rect class="web" x="56" y="290" width="188" height="100" rx="8"/>
   <text class="t" x="70" y="314">Connect calling page</text>
   <text x="70" y="334">Amazon Chime SDK,</text>
   <text x="70" y="350">joins a WebRTC contact</text>
@@ -154,7 +148,7 @@
   <!-- Edges -->
   <path class="arrow" d="M244 160 H326"/>
   <text class="m" x="285" y="150" text-anchor="middle">HTTPS, WSS</text>
-  <path class="darrow" d="M244 320 H280 V190 H326"/>
+  <path class="arrow" d="M244 320 H280 V190 H326"/>
   <path class="arrow" d="M430 210 V306"/>
   <text class="m" x="438" y="262">static site</text>
   <path class="arrow" d="M530 175 H586"/>
@@ -170,7 +164,7 @@
   <text class="m" x="764" y="470" text-anchor="end">code, Connect IDs</text>
   <path class="arrow" d="M470 506 V450 H610 V384"/>
   <text class="m" x="480" y="444">image</text>
-  <path class="darrow" d="M244 380 H285 V690 H321"/>
+  <path class="arrow" d="M244 380 H285 V690 H321"/>
   <text class="m" x="277" y="620" transform="rotate(-90 277 620)" text-anchor="middle">WebRTC call</text>
   <path class="arrow" d="M515 690 H531"/>
   <path class="kill" d="M1050 506 V440 H805 V414"/>

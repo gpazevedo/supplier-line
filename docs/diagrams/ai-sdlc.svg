@@ -132,7 +132,7 @@
 
   <!-- Phases and checkpoints -->
   <text class="h2" x="40" y="620">Phases and human checkpoints</text>
-  <text class="m" x="1160" y="620" text-anchor="end">status on 27 Sep 2026</text>
+  <text class="m" x="1160" y="620" text-anchor="end">status on 28 Sep 2026</text>
   <path class="arrow" d="M60 668 H1018"/>
 
   <g>
@@ -159,17 +159,17 @@
     <text class="s" x="454" y="680" text-anchor="middle">S12, S13, S22</text>
     <text class="m s" x="454" y="710" text-anchor="middle">real-time audio</text>
 
-    <path class="hu wip" d="M540 646 L562 668 L540 690 L518 668 z"/>
+    <path class="hu" d="M540 646 L562 668 L540 690 L518 668 z"/>
     <text class="s" x="540" y="672" text-anchor="middle" font-weight="700">H2</text>
     <text class="m s" x="540" y="710" text-anchor="middle">listen</text>
 
-    <rect class="ai wip" x="582" y="646" width="104" height="44" rx="8"/>
+    <rect class="ai" x="582" y="646" width="104" height="44" rx="8"/>
     <text class="s" x="634" y="664" text-anchor="middle" font-weight="700">Phase 3</text>
     <text class="s" x="634" y="680" text-anchor="middle">S14–S18, S23</text>
     <text class="m s" x="634" y="710" text-anchor="middle">failures, access,</text>
     <text class="m s" x="634" y="724" text-anchor="middle">Connect, a11y</text>
 
-    <rect class="ai todo" x="706" y="646" width="76" height="44" rx="8"/>
+    <rect class="ai" x="706" y="646" width="76" height="44" rx="8"/>
     <text class="s" x="744" y="664" text-anchor="middle" font-weight="700">Phase 4</text>
     <text class="s" x="744" y="680" text-anchor="middle">S19</text>
     <text class="m s" x="744" y="710" text-anchor="middle">final review</text>
@@ -178,7 +178,7 @@
     <text class="s" x="822" y="672" text-anchor="middle" font-weight="700">H3</text>
     <text class="m s" x="822" y="710" text-anchor="middle">demo-up 1 h</text>
 
-    <rect class="ai todo" x="864" y="646" width="76" height="44" rx="8"/>
+    <rect class="ai wip" x="864" y="646" width="76" height="44" rx="8"/>
     <text class="s" x="902" y="664" text-anchor="middle" font-weight="700">Phase 5</text>
     <text class="s" x="902" y="680" text-anchor="middle">S20</text>
     <text class="m s" x="902" y="710" text-anchor="middle">README, ADRs</text>
