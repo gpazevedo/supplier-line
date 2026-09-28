@@ -95,6 +95,11 @@ beforeEach(async () => {
     rotation: ROTATION,
     accessCode: ACCESS_CODE,
     notices: { warning: Buffer.alloc(200), expired: Buffer.alloc(200) },
+    phrases: {
+      'FH-01': { text: 'fallback', pcm: Buffer.alloc(200) },
+      'FH-03': { text: 'filler one', pcm: Buffer.alloc(50) },
+      'FH-10': { text: 'filler two', pcm: Buffer.alloc(50) },
+    },
   };
 });
 

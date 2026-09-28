@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import { ConnectClient } from '@aws-sdk/client-connect';
 import { localTraceWriter } from 'traces/src/index.js';
+import { loadFixedPhrases } from './phrases/fixed.js';
 import { loadSessionNotices } from './phrases/notices.js';
 import { attachSessions } from './sessions.js';
 import { createHostServer, type ConnectDeps } from './server.js';
@@ -33,6 +34,7 @@ attachSessions(server, {
   rotation,
   accessCode,
   notices: loadSessionNotices(),
+  phrases: loadFixedPhrases(),
 });
 server.listen(port, () =>
   console.log(

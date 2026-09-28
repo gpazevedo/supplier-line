@@ -17,6 +17,9 @@ interface OpenTurn {
   earlyToolCalls: number;
   caller: string[];
   spoken: string[];
+  fillerPlayed?: boolean;
+  /** ASSISTANT segments spoken as SPECULATIVE text with no FINAL confirmation yet, in order. */
+  pendingSpeculative: string[];
 }
 
 type Body = Record<string, unknown>;
@@ -62,6 +65,37 @@ export class TurnRecorder {
     if (this.current) this.current.tool = { name, rendering };
   }
 
+  /**
+   * Records a fixed phrase (FH-01) played directly on the socket as a whole turn: `text` is its
+   * only spoken content, `bytes` its audio, played the instant it is detected. Returns the new
+   * turn's index.
+   */
+  onFallback(text: string, bytes: number, atMs: number): number {
+    const index = this.open.length;
+    this.open.push({
+      index,
+      callerAt: atMs,
+      firstAudioAt: atMs,
+      caller: [],
+      spoken: [text],
+      earlyToolCalls: 0,
+      pendingSpeculative: [],
+    });
+    this.ledger.generated(index, bytes);
+    return index;
+  }
+
+  /**
+   * Records a filler phrase (FH-03/FH-10) played directly during `turnIndex`: its audio counts
+   * toward that turn's generated/delivered total, and `filler.played` is set in its trace entry.
+   */
+  onFiller(turnIndex: number, bytes: number): void {
+    const turn = this.open[turnIndex];
+    if (!turn) return;
+    turn.fillerPlayed = true;
+    this.ledger.generated(turnIndex, bytes);
+  }
+
   turns(): TraceTurn[] {
     return this.open.map((turn, index) => ({
       index,
@@ -71,6 +105,7 @@ export class TurnRecorder {
       ...this.ledger.entry(index),
       ...(turn.tool && { tool: turn.tool }),
       ...(turn.earlyToolCalls > 0 && { early_tool_calls: turn.earlyToolCalls }),
+      ...(turn.fillerPlayed && { filler: { played: true } }),
       assistant: { final_text: turn.spoken.join(' ') },
     }));
   }
@@ -114,6 +149,7 @@ export class TurnRecorder {
   private onText(block: Block | undefined, text: string, atMs: number): void {
     if (block?.role === 'ASSISTANT' && !block.final && this.current) {
       this.ledger.planned(this.current.index, text);
+      this.current.pendingSpeculative.push(text.trim());
     }
     if (!block?.final || isInterruption(text)) return;
     if (block.role === 'USER' && this.answered())
@@ -123,10 +159,33 @@ export class TurnRecorder {
         caller: [],
         spoken: [],
         earlyToolCalls: 0,
+        pendingSpeculative: [],
       });
     else if (block.role === 'USER' && this.current) this.current.callerAt = atMs;
     if (block.role === 'USER') this.current?.caller.push(text.trim());
-    if (block.role === 'ASSISTANT' && this.current) this.current.spoken.push(text.trim());
+    if (block.role === 'ASSISTANT' && this.current) {
+      this.current.pendingSpeculative.shift(); // this FINAL settles the oldest still-open segment
+      this.current.spoken.push(text.trim());
+    }
+  }
+
+  /**
+   * Sonic has finished this response for good (no more FINAL text is coming): call on a
+   * `completionEnd` event. Any ASSISTANT segment still stuck at SPECULATIVE — a real Sonic gap,
+   * seen for a long multi-sentence rendering whose trailing FINAL never arrives even though its
+   * audio was fully spoken — falls back to its speculative text, so the trace and history aren't
+   * missing what the caller heard. Returns the segments recovered this way, in order, so the
+   * caller can also report them as live transcript lines.
+   */
+  onCompletionEnd(): string[] {
+    const recovered: string[] = [];
+    for (const turn of this.open) {
+      if (!turn.pendingSpeculative.length) continue;
+      recovered.push(...turn.pendingSpeculative);
+      turn.spoken.push(...turn.pendingSpeculative);
+      turn.pendingSpeculative = [];
+    }
+    return recovered;
   }
 
   /** True when there is no turn yet, or the current one already has agent output. */
