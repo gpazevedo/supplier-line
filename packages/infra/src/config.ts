@@ -5,6 +5,9 @@ export const ECR_REPOSITORY = 'supplier-line-host';
 export const NOVA_SONIC_MODEL = 'amazon.nova-2-sonic-v1:0';
 export const PERSISTENT_STACK_NAME = 'supplier-line-persistent';
 export const GITHUB_REPO = 'gpazevedo/supplier-line';
+/** Immutable numeric IDs GitHub puts in the OIDC `sub` claim; public, not secret. */
+export const GITHUB_OWNER_ID = 54742084;
+export const GITHUB_REPO_ID = 1389281503;
 export const ACCESS_CODE_PARAMETER = '/supplier-line/demo-access-code';
 export const ACCESS_CODE_PLACEHOLDER = 'placeholder-set-by-owner';
 export const CONNECT_INSTANCE_ID_PARAMETER = '/supplier-line/connect-instance-id';

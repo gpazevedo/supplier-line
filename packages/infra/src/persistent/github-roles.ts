@@ -8,7 +8,13 @@ import {
   WebIdentityPrincipal,
 } from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
-import { APP_STACK_NAME, GITHUB_REPO, SITE_BUCKET_PREFIX } from '../config';
+import {
+  APP_STACK_NAME,
+  GITHUB_OWNER_ID,
+  GITHUB_REPO,
+  GITHUB_REPO_ID,
+  SITE_BUCKET_PREFIX,
+} from '../config';
 import { EPHEMERAL_TAG } from '../reaper/rules';
 
 const ISSUER = 'token.actions.githubusercontent.com';
@@ -46,6 +52,16 @@ function allowOnAppStack(role: Role, actions: string[]) {
   });
 }
 
+const [OWNER, REPO] = GITHUB_REPO.split('/');
+
+/**
+ * The `sub` GitHub sends for a job in Environment `env`, in the immutable-ID format
+ * `repo:OWNER@OWNER-ID/REPO@REPO-ID:environment:ENV`.
+ * See https://docs.github.com/en/actions/reference/security/oidc ("Immutable subject claims").
+ */
+const environmentSubject = (env: GithubEnvironment) =>
+  `repo:${OWNER}@${GITHUB_OWNER_ID}/${REPO}@${GITHUB_REPO_ID}:environment:${env}`;
+
 /** A role only a job running in GitHub Environment `env` of this repo can assume. */
 function environmentRole(scope: Construct, provider: IOidcProvider, env: GithubEnvironment) {
   return new Role(scope, `Github${env[0].toUpperCase()}${env.slice(1)}Role`, {
@@ -53,7 +69,7 @@ function environmentRole(scope: Construct, provider: IOidcProvider, env: GithubE
     assumedBy: new WebIdentityPrincipal(provider.oidcProviderArn, {
       StringEquals: {
         [`${ISSUER}:aud`]: 'sts.amazonaws.com',
-        [`${ISSUER}:sub`]: `repo:${GITHUB_REPO}:environment:${env}`,
+        [`${ISSUER}:sub`]: environmentSubject(env),
       },
     }),
   });
