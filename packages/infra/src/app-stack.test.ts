@@ -46,6 +46,13 @@ describe('AppStack network', () => {
       ],
     });
   });
+
+  it('tags the ECS service, so the reaper may scale it to zero', () => {
+    const { template } = build();
+    template.hasResourceProperties('AWS::ECS::Service', {
+      Tags: Match.arrayWith([{ Key: 'supplier-line:ephemeral', Value: 'true' }]),
+    });
+  });
 });
 
 describe('AppStack load balancer', () => {

@@ -57,6 +57,31 @@ describe('ReaperConstruct alerts', () => {
   });
 });
 
+describe('ReaperConstruct alert topic policy', () => {
+  it('lets the error alarm publish, since the SSL-only policy replaces the default one', () => {
+    template.hasResourceProperties('AWS::SNS::TopicPolicy', {
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          {
+            Effect: 'Allow',
+            Sid: 'AllowErrorAlarmPublish',
+            Principal: { Service: 'cloudwatch.amazonaws.com' },
+            Action: 'sns:Publish',
+            Resource: { Ref: Match.stringLikeRegexp('^ReaperAlerts') },
+            Condition: {
+              ArnEquals: {
+                'aws:SourceArn': {
+                  'Fn::GetAtt': [Match.stringLikeRegexp('^ReaperErrorAlarm'), 'Arn'],
+                },
+              },
+            },
+          },
+        ]),
+      },
+    });
+  });
+});
+
 describe('ReaperConstruct error alarm', () => {
   it('alarms to the alerts topic on any reaper Lambda error', () => {
     template.hasResourceProperties('AWS::CloudWatch::Alarm', {
@@ -105,6 +130,18 @@ describe('ReaperConstruct IAM policy', () => {
     });
   });
 
+  it('can list stacks: DescribeStacks with no StackName also needs ListStacks', () => {
+    const statements = Object.values(template.findResources('AWS::IAM::Policy')).flatMap(
+      (p) => p.Properties.PolicyDocument.Statement
+    );
+    const onAll = statements
+      .filter((s) => s.Resource === '*' && !s.Condition)
+      .flatMap((s) => s.Action);
+    expect(onAll).toEqual(
+      expect.arrayContaining(['cloudformation:DescribeStacks', 'cloudformation:ListStacks'])
+    );
+  });
+
   it('grants only its logs, listing, tag-scoped delete and scale, and publishing alerts', () => {
     template.hasResourceProperties('AWS::IAM::Policy', {
       Roles: [{ Ref: Match.stringLikeRegexp('^ReaperRole') }],
@@ -115,7 +152,11 @@ describe('ReaperConstruct IAM policy', () => {
             Action: ['logs:CreateLogStream', 'logs:PutLogEvents'],
             Resource: { 'Fn::GetAtt': [Match.stringLikeRegexp('^ReaperLogs'), 'Arn'] },
           },
-          { Effect: 'Allow', Action: 'cloudformation:DescribeStacks', Resource: '*' },
+          {
+            Effect: 'Allow',
+            Action: ['cloudformation:DescribeStacks', 'cloudformation:ListStacks'],
+            Resource: '*',
+          },
           {
             Effect: 'Allow',
             Action: ['cloudformation:DeleteStack', 'cloudformation:ListStackResources'],
