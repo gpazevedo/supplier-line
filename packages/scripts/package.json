@@ -12,6 +12,7 @@
   "devDependencies": {
     "host": "workspace:^",
     "tools": "workspace:^",
+    "traces": "workspace:^",
     "tsx": "^4.23.15"
   }
 }

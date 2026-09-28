@@ -162,6 +162,11 @@ describe('PersistentStack Lex bot', () => {
 });
 
 describe('PersistentStack Connect', () => {
+  it('creates the contact flow only after the bot is associated with the instance', () => {
+    const [flow] = Object.values(template.findResources('AWS::Connect::ContactFlow'));
+    expect(flow.DependsOn).toEqual([logicalId('AWS::Connect::IntegrationAssociation')]);
+  });
+
   it('associates the bot alias with the Connect instance', () => {
     template.hasResourceProperties('AWS::Connect::IntegrationAssociation', {
       InstanceId: { 'Fn::GetAtt': [logicalId('AWS::Connect::Instance'), 'Arn'] },

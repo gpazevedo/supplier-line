@@ -36,4 +36,15 @@ describe('checkTraces', () => {
   it('ignores a directory that does not exist', () => {
     expect(checkTraces([join(tmpdir(), 'no-such-traces-dir')]).ok).toBe(true);
   });
+
+  it('fails on no traces when traces are required, as for a live run', () => {
+    const empty = mkdtempSync(join(tmpdir(), 'traces-'));
+    const result = checkTraces([empty], { requireTraces: true });
+    expect(result.ok).toBe(false);
+    expect(result.report).toContain('0 traces, 0 failed');
+  });
+
+  it('passes required traces that are all good', () => {
+    expect(checkTraces([samples], { requireTraces: true }).ok).toBe(true);
+  });
 });

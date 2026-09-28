@@ -37,6 +37,6 @@ export function createConnect(scope: Construct, fulfillment: IFunction): Connect
     type: 'CONTACT_FLOW',
     content: Stack.of(scope).toJsonString(contactFlowContent(alias.attrArn)),
   });
-  flow.addDependency(association);
+  flow.addResourceDependency(association);
   return { instance, flow };
 }

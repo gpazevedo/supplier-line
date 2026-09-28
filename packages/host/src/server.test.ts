@@ -86,6 +86,26 @@ describe('POST /api/connect/start', () => {
     });
   });
 
+  it('returns 401 for a JSON body that is not an object, and keeps serving', async () => {
+    const { connect, calls } = recordingConnect();
+    await withServer({ connect, accessCode: ACCESS_CODE }, async (port) => {
+      for (const body of [null, 42, 'code', [ACCESS_CODE]]) {
+        expect((await post(port, body)).status, JSON.stringify(body)).toBe(401);
+      }
+      expect((await fetch(`http://127.0.0.1:${port}/health`)).status).toBe(200);
+      expect(calls).toEqual([]);
+    });
+  });
+
+  it('returns 413 for a body over 4 KiB, before checking the code', async () => {
+    const { connect, calls } = recordingConnect();
+    await withServer({ connect, accessCode: ACCESS_CODE }, async (port) => {
+      const res = await post(port, { code: ACCESS_CODE, padding: 'x'.repeat(5000) });
+      expect(res.status).toBe(413);
+      expect(calls).toEqual([]);
+    });
+  });
+
   it('returns 503 when Connect is not configured, even with the right code', async () => {
     await withServer({ accessCode: ACCESS_CODE }, async (port) => {
       const res = await post(port, { code: ACCESS_CODE });

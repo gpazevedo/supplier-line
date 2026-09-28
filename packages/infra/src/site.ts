@@ -1,4 +1,4 @@
-import { CfnOutput, RemovalPolicy, Validations } from 'aws-cdk-lib';
+import { Aws, CfnOutput, RemovalPolicy, Validations } from 'aws-cdk-lib';
 import {
   AllowedMethods,
   CachePolicy,
@@ -12,10 +12,13 @@ import {
 import { LoadBalancerV2Origin, S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 import { BlockPublicAccess, Bucket, BucketEncryption } from 'aws-cdk-lib/aws-s3';
 import type { Construct } from 'constructs';
+import { SITE_BUCKET_PREFIX } from './config';
 import type { LoadBalancer } from './load-balancer';
 
+/** Named by account, so the demo role can be granted this bucket alone; demo-up syncs the pages in. */
 function createSiteBucket(scope: Construct): Bucket {
   const bucket = new Bucket(scope, 'SiteBucket', {
+    bucketName: `${SITE_BUCKET_PREFIX}${Aws.ACCOUNT_ID}`,
     blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
     encryption: BucketEncryption.S3_MANAGED,
     enforceSSL: true,

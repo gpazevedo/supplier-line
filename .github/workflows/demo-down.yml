@@ -1,6 +1,5 @@
-# Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
-# checkout v5, aws-actions/configure-aws-credentials v5.
-#
+# Actions are pinned to commit SHAs (version in the comment), checked against each repo's
+# latest release on Sep 27, 2026; all run on node24.
 # Removing infrastructure never needs consent: no reviewer on the `teardown` Environment.
 # The nightly run is a backup to the reaper Lambda.
 name: demo-down
@@ -22,14 +21,14 @@ env:
 
 jobs:
   teardown:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: teardown
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.TEARDOWN_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}

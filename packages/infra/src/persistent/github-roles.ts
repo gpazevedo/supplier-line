@@ -8,7 +8,7 @@ import {
   WebIdentityPrincipal,
 } from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
-import { APP_STACK_NAME, GITHUB_REPO } from '../config';
+import { APP_STACK_NAME, GITHUB_REPO, SITE_BUCKET_PREFIX } from '../config';
 import { EPHEMERAL_TAG } from '../reaper/rules';
 
 const ISSUER = 'token.actions.githubusercontent.com';
@@ -59,9 +59,29 @@ function environmentRole(scope: Construct, provider: IOidcProvider, env: GithubE
   });
 }
 
-/** demo-up: push the host image, deploy the app stack through the CDK bootstrap roles, read its outputs. */
+const SITE_BUCKET_ARN = `arn:${Aws.PARTITION}:s3:::${SITE_BUCKET_PREFIX}${Aws.ACCOUNT_ID}`;
+
+/** `aws s3 sync --delete` of the built web pages into the app stack's site bucket, and nothing else. */
+function grantSiteUpload(role: Role) {
+  role.addToPolicy(
+    new PolicyStatement({ actions: ['s3:ListBucket'], resources: [SITE_BUCKET_ARN] })
+  );
+  role.addToPolicy(
+    new PolicyStatement({
+      actions: ['s3:PutObject', 's3:DeleteObject'],
+      resources: [`${SITE_BUCKET_ARN}/*`],
+    })
+  );
+  Validations.of(role).acknowledge({
+    id: `AwsSolutions-IAM5[Resource::arn:<AWS::Partition>:s3:::${SITE_BUCKET_PREFIX}<AWS::AccountId>/*]`,
+    reason: 'Object keys are the built page files; the bucket holds only the public static site.',
+  });
+}
+
+/** demo-up: push the host image, deploy the app stack through the CDK bootstrap roles, read its outputs, upload the pages. */
 function grantDemo(role: Role, repository: IRepository) {
   repository.grantPullPush(role);
+  grantSiteUpload(role);
   role.addToPolicy(assumeCdkDeployRoles());
   allowOnAppStack(role, ['cloudformation:DescribeStacks']);
   Validations.of(role).acknowledge({

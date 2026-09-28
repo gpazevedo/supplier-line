@@ -34,6 +34,13 @@ function persistentParameter(scope: Construct, id: string, name: string) {
   return StringParameter.fromStringParameterName(scope, id, name);
 }
 
+/**
+ * Contact flows in this account and region, the resource `StartWebRTCContact` needs. The flow's IDs
+ * live in the persistent stack; resolving them in this template (SSM parameter types or dynamic
+ * references) would fail at deploy, because the CDK deploy role may read only the bootstrap version.
+ */
+const CONTACT_FLOWS_ARN = `arn:${Aws.PARTITION}:connect:${Aws.REGION}:${Aws.ACCOUNT_ID}:instance/*/contact-flow/*`;
+
 function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDefinition {
   const stack = Stack.of(scope);
   const task = new FargateTaskDefinition(scope, 'HostTask', {
@@ -50,6 +57,7 @@ function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDe
       imageTag
     ),
     portMappings: [{ containerPort: HOST_PORT }],
+    environment: { TRACES_BUCKET: `supplier-line-traces-${Aws.ACCOUNT_ID}` },
     logging: LogDrivers.awsLogs({
       streamPrefix: 'host',
       logGroup: new LogGroup(scope, 'HostLogs', {
@@ -69,9 +77,10 @@ function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDe
       ),
     },
   });
+  // InvokeModelWithBidirectionalStream is authorized by bedrock:InvokeModel; there is no IAM action of its own.
   task.addToTaskRolePolicy(
     new PolicyStatement({
-      actions: ['bedrock:InvokeModelWithBidirectionalStream'],
+      actions: ['bedrock:InvokeModel'],
       resources: [
         Arn.format(
           {
@@ -87,13 +96,28 @@ function createTaskDefinition(scope: Construct, imageTag: string): FargateTaskDe
   );
   task.addToTaskRolePolicy(
     new PolicyStatement({
+      actions: ['connect:StartWebRTCContact'],
+      resources: [CONTACT_FLOWS_ARN],
+    })
+  );
+  task.addToTaskRolePolicy(
+    new PolicyStatement({
       actions: ['s3:PutObject'],
       resources: [`arn:${Aws.PARTITION}:s3:::supplier-line-traces-${Aws.ACCOUNT_ID}/*`],
     })
   );
+  Validations.of(task).acknowledge({
+    id: 'AwsSolutions-ECS2',
+    reason: 'TRACES_BUCKET is the bucket name, derived from the account ID; it is not a secret.',
+  });
   Validations.of(task.obtainExecutionRole()).acknowledge({
     id: 'AwsSolutions-IAM5[Resource::*]',
     reason: 'ecr:GetAuthorizationToken does not support resource-level permissions.',
+  });
+  Validations.of(task.taskRole).acknowledge({
+    id: 'AwsSolutions-IAM5[Resource::arn:<AWS::Partition>:connect:<AWS::Region>:<AWS::AccountId>:instance/*/contact-flow/*]',
+    reason:
+      "The flow's IDs are known only to the persistent stack; the account has one Connect instance, for this demo.",
   });
   Validations.of(task.taskRole).acknowledge({
     id: 'AwsSolutions-IAM5[Resource::arn:<AWS::Partition>:s3:::supplier-line-traces-<AWS::AccountId>/*]',

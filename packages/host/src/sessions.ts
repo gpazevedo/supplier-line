@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
-import type { TraceWriter } from 'traces/src/index.js';
+import type { Trace, TraceWriter } from 'traces/src/index.js';
 import { WebSocketServer, type WebSocket } from 'ws';
 import type { FixedPhrases } from './phrases/fixed.js';
 import { OUTPUT_RATE } from './sonic/events.js';
@@ -10,14 +10,16 @@ import { SonicSession, type SessionFault } from './sonic/session.js';
 /**
  * Messages the host sends as JSON text frames; agent audio goes out as binary frames. A `turn`
  * marker precedes the first audio of each turn; `flush` means drop all queued agent audio, and
- * names the interrupted turn, which may not have sent any audio yet. `rejected` is sent just
- * before the socket closes without a session ever starting (S17).
+ * names the interrupted turn, which may not have sent any audio yet. `trace` carries the finished
+ * session's own trace and where it was written, so a remote caller (the live smoke job) can check
+ * it without AWS access. `rejected` is sent just before the socket closes without a session ever
+ * starting (S17).
  */
 export type HostMessage =
   | { type: 'transcript'; role: 'USER' | 'ASSISTANT'; text: string }
   | { type: 'turn'; index: number }
   | { type: 'flush'; turn?: number }
-  | { type: 'trace'; path: string }
+  | { type: 'trace'; path: string; trace: Trace }
   | { type: 'rejected'; reason: string };
 
 /**
@@ -125,6 +127,15 @@ function reject(socket: WebSocket, code: number, reason: string): void {
   socket.close(code, reason);
 }
 
+/** A client text frame, or undefined if it isn't JSON: a bad frame must not crash every session. */
+function parseClientMessage(text: string): ClientMessage | undefined {
+  try {
+    return JSON.parse(text) as ClientMessage;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Milliseconds of 24 kHz 16-bit mono PCM. */
 function durationMs(pcm: Buffer): number {
   return Math.round(pcm.length / 2 / (OUTPUT_RATE / 1000));
@@ -180,7 +191,8 @@ async function serve(
 
   socket.on('message', (data, isBinary) => {
     if (isBinary) return session.sendAudio(data as Buffer);
-    const message = JSON.parse(String(data)) as ClientMessage;
+    const message = parseClientMessage(String(data));
+    if (!message) return;
     if (message.type === 'played' && message.turn >= 0) session.onPlayed(message.turn, message.ms);
     if (message.type === 'flushed' && message.turn >= 0)
       session.onFlushed(message.turn, message.ms);
@@ -190,7 +202,8 @@ async function serve(
   try {
     await session.run();
     stopTimers();
-    send({ type: 'trace', path: await writer.write(session.trace()) });
+    const trace = session.trace();
+    send({ type: 'trace', path: await writer.write(trace), trace });
     socket.close();
   } catch (error) {
     stopTimers();

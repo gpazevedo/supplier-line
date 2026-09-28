@@ -1,15 +1,12 @@
-import { fileURLToPath } from 'node:url';
 import { ConnectClient } from '@aws-sdk/client-connect';
-import { localTraceWriter } from 'traces/src/index.js';
 import { loadFixedPhrases } from './phrases/fixed.js';
 import { loadSessionNotices } from './phrases/notices.js';
 import { attachSessions } from './sessions.js';
 import { createHostServer, type ConnectDeps } from './server.js';
 import { createSonicClient } from './sonic/session.js';
+import { traceWriter } from './trace-writer.js';
 
 const port = Number(process.env.PORT ?? 8080);
-const traceDir =
-  process.env.TRACE_DIR ?? fileURLToPath(new URL('../../../traces/', import.meta.url));
 const rotation = {
   thresholdMs: Number(process.env.ROTATE_AFTER_S ?? 360) * 1000,
   bufferMs: 3000,
@@ -30,7 +27,7 @@ function connectDeps(): ConnectDeps | undefined {
 const server = createHostServer({ connect: connectDeps(), accessCode });
 attachSessions(server, {
   client: createSonicClient(),
-  writer: localTraceWriter(traceDir),
+  writer: traceWriter(),
   rotation,
   accessCode,
   notices: loadSessionNotices(),
@@ -38,6 +35,6 @@ attachSessions(server, {
 });
 server.listen(port, () =>
   console.log(
-    `host listening on :${port}, traces in ${traceDir}, rotation after ${rotation.thresholdMs / 1000} s`
+    `host listening on :${port}, traces to ${process.env.TRACES_BUCKET ?? process.env.TRACE_DIR ?? 'traces/'}, rotation after ${rotation.thresholdMs / 1000} s`
   )
 );

@@ -1,8 +1,5 @@
-# Action versions are best-known latest majors, UNVERIFIED (not checked against the registry):
-# checkout v5, setup-node v5, pnpm/action-setup v4, docker/setup-qemu-action v3,
-# docker/setup-buildx-action v3, docker/build-push-action v6,
-# aws-actions/configure-aws-credentials v5, aws-actions/amazon-ecr-login v2, actions/upload-artifact v5.
-#
+# Actions are pinned to commit SHAs (version in the comment), checked against each repo's
+# latest release on Sep 27, 2026; all run on node24.
 # Consent gate: the only workflow that deploys the app stack. Approval happens on the
 # `demo` Environment. The smoke job has no AWS access and no Environment.
 name: demo-up
@@ -27,7 +24,7 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: demo
     permissions:
       contents: read
@@ -36,18 +33,18 @@ jobs:
       site_url: ${{ steps.deploy.outputs.site_url }}
       expires_at: ${{ steps.deploy.outputs.expires_at }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: aws-actions/configure-aws-credentials@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         with:
           role-to-assume: ${{ vars.DEMO_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
       - id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-      - uses: docker/setup-qemu-action@v3
+        uses: aws-actions/amazon-ecr-login@03f1aad4c6c7ffd436567f42f9384779290529bd # v2.1.7
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
         with:
           platforms: arm64
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           platforms: linux/arm64
@@ -55,8 +52,8 @@ jobs:
           tags: ${{ steps.ecr.outputs.registry }}/supplier-line-host:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -73,6 +70,9 @@ jobs:
             --query "Stacks[0].Outputs[?OutputKey=='SiteUrl'].OutputValue" --output text)
           echo "expires_at=$expires_at" >> "$GITHUB_OUTPUT"
           echo "site_url=$site_url" >> "$GITHUB_OUTPUT"
+      # The site bucket starts empty; CloudFront would answer 403 until the pages are in it.
+      - run: pnpm --filter web build
+      - run: aws s3 sync packages/web/dist s3://supplier-line-site-"$(aws sts get-caller-identity --query Account --output text)" --delete
       # cdk deploy returns only after the Fargate service is stable; this waits for CloudFront.
       - env:
           SITE_URL: ${{ steps.deploy.outputs.site_url }}
@@ -89,26 +89,29 @@ jobs:
 
   smoke:
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Placeholder: S16 adds the `replay-clips` script to packages/scripts.
+      # 420 s crosses the host's 360 s rotation threshold; --require-rotation fails the long
+      # scenario unless its trace shows an FH-05 handover.
       - env:
           SITE_URL: ${{ needs.deploy.outputs.site_url }}
           DEMO_ACCESS_CODE: ${{ secrets.DEMO_ACCESS_CODE }}
-        run: pnpm --filter scripts run replay-clips -- --url "$SITE_URL" --out traces/live
+        run: pnpm --filter scripts run replay-clips -- --url "$SITE_URL" --out traces/live --long-seconds 420 --require-rotation
       - if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: live-traces
           path: traces/live
           if-no-files-found: warn
-      - run: pnpm check:traces
+      # This run's own traces, as the host returned them; fails if there are none.
+      - if: always()
+        run: pnpm check:traces "$PWD/traces/live"

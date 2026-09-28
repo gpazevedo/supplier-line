@@ -12,9 +12,11 @@ RUN pnpm --filter host deploy --prod /out
 
 # Runtime stage: takes the target platform (build with --platform linux/arm64 for Fargate). Copy only, no RUN, so nothing executes under emulation.
 FROM node:24-slim
-ENV NODE_ENV=production PORT=8080
+ENV NODE_ENV=production PORT=8080 ASSETS_DIR=/app/assets
 WORKDIR /app
 COPY --from=build /out ./
+# The bundle's own path no longer leads back to the repo, so the host finds its audio through ASSETS_DIR.
+COPY --from=build /repo/assets ./assets
 USER node
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
