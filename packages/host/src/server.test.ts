@@ -20,52 +20,103 @@ it('unknown path returns 404', async () => {
   expect((await fetch(`${base}/nope`)).status).toBe(404);
 });
 
+const ACCESS_CODE = 'let-me-in';
+
+/** A `ConnectDeps` whose client records every command it's sent, for asserting it was never called. */
+function recordingConnect(): { connect: ConnectDeps; calls: unknown[] } {
+  const calls: unknown[] = [];
+  const connectionData = {
+    Attendee: { AttendeeId: 'a-1', JoinToken: 'token' },
+    Meeting: { MeetingId: 'm-1' },
+  };
+  const fakeClient = {
+    send: async (command: { input: unknown }) => {
+      calls.push(command.input);
+      return {
+        ConnectionData: connectionData,
+        ContactId: 'contact-1',
+        ParticipantId: 'participant-1',
+        ParticipantToken: 'participant-token',
+      };
+    },
+  } as unknown as ConnectClient;
+  return {
+    calls,
+    connect: { client: fakeClient, instanceId: 'instance-1', contactFlowId: 'flow-1' },
+  };
+}
+
+async function post(port: number, body?: unknown): Promise<Response> {
+  return fetch(`http://127.0.0.1:${port}/api/connect/start`, {
+    method: 'POST',
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+async function withServer<T>(
+  deps: Parameters<typeof createHostServer>[0],
+  run: (port: number) => Promise<T>
+): Promise<T> {
+  const server = createHostServer(deps);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  try {
+    return await run((server.address() as AddressInfo).port);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+}
+
 describe('POST /api/connect/start', () => {
-  it('returns 503 when Connect is not configured', async () => {
-    const res = await fetch(`${base}/api/connect/start`, { method: 'POST' });
-    expect(res.status).toBe(503);
+  it('returns 401 with no Connect call when the access code is missing', async () => {
+    const { connect, calls } = recordingConnect();
+    await withServer({ connect, accessCode: ACCESS_CODE }, async (port) => {
+      const res = await post(port);
+      expect(res.status).toBe(401);
+      expect(calls).toEqual([]);
+    });
+  });
+
+  it('returns 401 with no Connect call when the access code is wrong', async () => {
+    const { connect, calls } = recordingConnect();
+    await withServer({ connect, accessCode: ACCESS_CODE }, async (port) => {
+      const res = await post(port, { code: 'nope' });
+      expect(res.status).toBe(401);
+      expect(calls).toEqual([]);
+    });
+  });
+
+  it('returns 503 when Connect is not configured, even with the right code', async () => {
+    await withServer({ accessCode: ACCESS_CODE }, async (port) => {
+      const res = await post(port, { code: ACCESS_CODE });
+      expect(res.status).toBe(503);
+    });
   });
 
   it('starts a WebRTC contact and returns what the calling page needs to join', async () => {
-    const calls: unknown[] = [];
-    const connectionData = {
-      Attendee: { AttendeeId: 'a-1', JoinToken: 'token' },
-      Meeting: { MeetingId: 'm-1' },
-    };
-    const fakeClient = {
-      send: async (command: { input: unknown }) => {
-        calls.push(command.input);
-        return {
-          ConnectionData: connectionData,
-          ContactId: 'contact-1',
-          ParticipantId: 'participant-1',
-          ParticipantToken: 'participant-token',
-        };
-      },
-    } as unknown as ConnectClient;
-    const connect: ConnectDeps = {
-      client: fakeClient,
-      instanceId: 'instance-1',
-      contactFlowId: 'flow-1',
-    };
-    const withConnect = createHostServer({ connect });
-    await new Promise<void>((resolve) => withConnect.listen(0, resolve));
-    const port = (withConnect.address() as AddressInfo).port;
+    const { connect, calls } = recordingConnect();
+    await withServer({ connect, accessCode: ACCESS_CODE }, async (port) => {
+      const res = await post(port, { code: ACCESS_CODE });
+      const body = await res.json();
 
-    const res = await fetch(`http://127.0.0.1:${port}/api/connect/start`, { method: 'POST' });
-    const body = await res.json();
-
-    expect(res.status).toBe(200);
-    expect(body).toEqual({
-      connectionData,
-      contactId: 'contact-1',
-      participantId: 'participant-1',
-      participantToken: 'participant-token',
+      expect(res.status).toBe(200);
+      expect(body).toEqual({
+        connectionData: {
+          Attendee: { AttendeeId: 'a-1', JoinToken: 'token' },
+          Meeting: { MeetingId: 'm-1' },
+        },
+        contactId: 'contact-1',
+        participantId: 'participant-1',
+        participantToken: 'participant-token',
+      });
+      expect(calls).toEqual([
+        {
+          InstanceId: 'instance-1',
+          ContactFlowId: 'flow-1',
+          ParticipantDetails: expect.any(Object),
+        },
+      ]);
     });
-    expect(calls).toEqual([
-      { InstanceId: 'instance-1', ContactFlowId: 'flow-1', ParticipantDetails: expect.any(Object) },
-    ]);
-    await new Promise<void>((resolve) => withConnect.close(() => resolve()));
   });
 
   it('returns 502 when StartWebRTCContact fails', async () => {
@@ -79,12 +130,9 @@ describe('POST /api/connect/start', () => {
       instanceId: 'instance-1',
       contactFlowId: 'flow-1',
     };
-    const withConnect = createHostServer({ connect });
-    await new Promise<void>((resolve) => withConnect.listen(0, resolve));
-    const port = (withConnect.address() as AddressInfo).port;
-
-    const res = await fetch(`http://127.0.0.1:${port}/api/connect/start`, { method: 'POST' });
-    expect(res.status).toBe(502);
-    await new Promise<void>((resolve) => withConnect.close(() => resolve()));
+    await withServer({ connect, accessCode: ACCESS_CODE }, async (port) => {
+      const res = await post(port, { code: ACCESS_CODE });
+      expect(res.status).toBe(502);
+    });
   });
 });

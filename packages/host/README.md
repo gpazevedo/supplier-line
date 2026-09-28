@@ -38,11 +38,16 @@ The replay streams the clip in real time, plays the agent audio on a wall clock,
   accounting for the real conversation is untouched.
 - **Keepalive.** A WebSocket ping every 20 s, so CloudFront and the ALB don't drop an otherwise
   silent connection.
-- **`POST /api/connect/start`.** Calls `StartWebRTCContact` against the persistent stack's Connect
-  instance and contact flow (read from `CONNECT_INSTANCE_ID` / `CONNECT_CONTACT_FLOW_ID`, set from
-  SSM in AWS) and returns `{connectionData, contactId, participantId, participantToken}` for the
-  Connect calling page (S18) to join with the Amazon Chime SDK. Returns 503 if those env vars
-  aren't set, 502 if the call fails.
+- **`POST /api/connect/start`.** Checks the same `DEMO_ACCESS_CODE` as `/ws`, sent as `{"code":
+...}` in the JSON body rather than a URL query so it doesn't end up in access logs; a wrong or
+  missing code is a 401, before `StartWebRTCContact` is ever called. With the right code, calls
+  `StartWebRTCContact` against the persistent stack's Connect instance and contact flow (read from
+  `CONNECT_INSTANCE_ID` / `CONNECT_CONTACT_FLOW_ID`, set from SSM in AWS) and returns
+  `{connectionData, contactId, participantId, participantToken}` for the Connect calling page (S18)
+  to join with the Amazon Chime SDK. Returns 503 if those env vars aren't set, 502 if the call
+  fails. Not counted toward `/ws`'s 2-concurrent-sessions limit: `StartWebRTCContact` is a single
+  request/response with no ongoing connection to this host, so there is nothing for a session count
+  to track once it returns.
 
 ## Tool calls
 

@@ -27,7 +27,7 @@ function connectDeps(): ConnectDeps | undefined {
   return { client: new ConnectClient({ region: 'us-east-1' }), instanceId, contactFlowId };
 }
 
-const server = createHostServer({ connect: connectDeps() });
+const server = createHostServer({ connect: connectDeps(), accessCode });
 attachSessions(server, {
   client: createSonicClient(),
   writer: localTraceWriter(traceDir),

@@ -20,6 +20,13 @@ const remoteAudio = document.createElement('audio');
 remoteAudio.hidden = true;
 remoteAudio.autoplay = true;
 
+const codeLabel = el('label', '', 'Access code') as HTMLLabelElement;
+codeLabel.htmlFor = 'access-code';
+const codeInput = document.createElement('input');
+codeInput.type = 'password';
+codeInput.id = 'access-code';
+codeInput.autocomplete = 'off';
+
 /** A closure that ends the call in progress; cleared once the session actually stops. */
 let hangUp: (() => void) | undefined;
 const button = el('button', '', 'Call') as HTMLButtonElement;
@@ -29,7 +36,7 @@ async function call(): Promise<void> {
   status.textContent = 'Calling…';
   say('Calling…');
   try {
-    const { connectionData } = await startConnectCall();
+    const { connectionData } = await startConnectCall(codeInput.value);
     const session = await buildMeetingSession(connectionData);
     session.audioVideo.addObserver({
       audioVideoDidStart: () => {
@@ -75,6 +82,8 @@ document
       'muted',
       'Calls through Amazon Connect and its Nova Sonic speech-to-speech bot. Use headphones.'
     ),
+    codeLabel,
+    codeInput,
     button,
     status,
     logHeading,
