@@ -33,13 +33,25 @@ function sendJson(res: ServerResponse<IncomingMessage>, status: number, body: un
   res.writeHead(status, { 'content-type': 'application/json' }).end(JSON.stringify(body));
 }
 
-/** Reads the request body as JSON; a missing or malformed body reads as `{}`. */
-async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+const MAX_BODY_BYTES = 4096;
+
+/**
+ * Reads the request body as a JSON object; a missing, malformed or non-object body reads as `{}`.
+ * Resolves `null` for a body over MAX_BODY_BYTES, which is drained without being kept.
+ */
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown> | null> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
-  if (chunks.length === 0) return {};
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size <= MAX_BODY_BYTES) chunks.push(chunk as Buffer);
+  }
+  if (size > MAX_BODY_BYTES) return null;
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    const value: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
   } catch {
     return {};
   }
@@ -60,6 +72,7 @@ async function startConnectContact(
   { connect, accessCode }: HostServerDeps
 ): Promise<void> {
   const body = await readJsonBody(req);
+  if (body === null) return sendJson(res, 413, { error: 'request body too large' });
   const code = typeof body.code === 'string' ? body.code : null;
   if (accessCode !== undefined) {
     if (code === null) return sendJson(res, 401, { error: 'missing access code' });

@@ -125,6 +125,15 @@ function reject(socket: WebSocket, code: number, reason: string): void {
   socket.close(code, reason);
 }
 
+/** A client text frame, or undefined if it isn't JSON: a bad frame must not crash every session. */
+function parseClientMessage(text: string): ClientMessage | undefined {
+  try {
+    return JSON.parse(text) as ClientMessage;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Milliseconds of 24 kHz 16-bit mono PCM. */
 function durationMs(pcm: Buffer): number {
   return Math.round(pcm.length / 2 / (OUTPUT_RATE / 1000));
@@ -180,7 +189,8 @@ async function serve(
 
   socket.on('message', (data, isBinary) => {
     if (isBinary) return session.sendAudio(data as Buffer);
-    const message = JSON.parse(String(data)) as ClientMessage;
+    const message = parseClientMessage(String(data));
+    if (!message) return;
     if (message.type === 'played' && message.turn >= 0) session.onPlayed(message.turn, message.ms);
     if (message.type === 'flushed' && message.turn >= 0)
       session.onFlushed(message.turn, message.ms);
