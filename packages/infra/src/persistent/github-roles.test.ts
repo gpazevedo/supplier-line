@@ -5,7 +5,7 @@ import { PersistentStack } from './persistent-stack';
 
 const ISSUER = 'token.actions.githubusercontent.com';
 const ENVIRONMENT_SUBS = ['demo', 'teardown', 'infra'].map(
-  (env) => `repo:gpazevedo/supplier-line:environment:${env}`
+  (env) => `repo:gpazevedo@54742084/supplier-line@1389281503:environment:${env}`
 );
 
 interface Statement {
