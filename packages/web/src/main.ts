@@ -1,6 +1,6 @@
 import type { Trace } from 'traces/src/schema.js';
 import { el } from './dom.js';
-import { listHostTraces, loadFile, loadHostTrace } from './load.js';
+import { loadFile } from './load.js';
 import { renderTrace } from './render.js';
 import './style.css';
 
@@ -29,15 +29,6 @@ function filePicker(): HTMLElement {
   return el('label', 'picker', 'Open trace files: ', input);
 }
 
-async function hostPicker(): Promise<HTMLElement | null> {
-  const ids = await listHostTraces().catch(() => []);
-  if (!ids.length) return null;
-  const select = el('select', '') as HTMLSelectElement;
-  select.append(new Option('Choose a trace', ''), ...ids.map((id) => new Option(id, id)));
-  select.addEventListener('change', () => select.value && show([loadHostTrace(select.value)]));
-  return el('label', 'picker', 'Host traces: ', select);
-}
-
 window.addEventListener('dragover', (event) => event.preventDefault());
 window.addEventListener('drop', (event) => {
   event.preventDefault();
@@ -45,8 +36,6 @@ window.addEventListener('drop', (event) => {
 });
 
 const controls = el('div', 'controls', filePicker());
-const host = await hostPicker();
-if (host) controls.append(host);
 app.append(
   el('h1', '', 'Supplier Line trace viewer'),
   el('p', 'muted', 'Drop trace JSON files anywhere on this page, or use a picker.'),
