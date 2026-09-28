@@ -2,8 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { NodeHttp2Handler } from '@smithy/node-http-handler';
+import type { DelayOptions } from 'tools/src/po-status/delay.js';
 import type { Trace } from 'traces/src/index.js';
+import type { FixedPhrases } from '../phrases/fixed.js';
 import { SonicConnection } from './connection.js';
+import { FillerTimer } from './filler-timer.js';
 import { Rotator, type RotationStats, type RotatorOptions } from './rotator.js';
 import { continuedPrompt, SYSTEM_PROMPT } from './prompt.js';
 import { callerStillReading } from './reading.js';
@@ -11,6 +14,32 @@ import { isInterruption, TurnRecorder } from './turns.js';
 
 /** Longest a lookup is held while the caller finishes reading the code. */
 const READING_TIMEOUT_MS = 4000;
+
+/** How long with no agent audio after the caller stops speaking before FH-03 plays a filler. */
+export const FH03_STALL_MS = 1500;
+
+/** Fault flags that force a failure behaviour to trigger reliably, for the demo video. */
+export interface SessionFault {
+  /** FH-10: forces the session's first `get_po_status` call to wait this long. */
+  toolDelayMs?: number;
+  /**
+   * FH-03: holds back the session's first turn's real agent audio for this long past the
+   * caller's last segment, so the stall (and hence the filler) reliably happens regardless of
+   * what Sonic says or how fast the lookup is. Held audio is replayed, in order, once released,
+   * so nothing Sonic says is lost — only delayed.
+   */
+  holdAudioMs?: number;
+}
+
+export interface SessionOptions {
+  /** The captured FH-01/03/10 audio and text (S15). */
+  phrases: FixedPhrases;
+  fault?: SessionFault;
+  /** Overridable for tests; production uses `connection.js`'s default. */
+  toolTimeoutMs?: number;
+  /** Overridable for tests; production uses `FH03_STALL_MS`. */
+  fillerStallMs?: number;
+}
 
 /** Bedrock client for `us-east-1` over HTTP/2, which the bidirectional stream requires. */
 export function createSonicClient(): BedrockRuntimeClient {
@@ -51,17 +80,37 @@ export class SonicSession {
   private readonly roles = new Map<string, string>();
   private readonly finished = Promise.withResolvers<undefined>();
   private readonly rotator: Rotator<SonicConnection>;
+  private readonly filler: FillerTimer;
   private ending = false;
+  /** True once the very first connection's open failure has been handled (FH-01), so a second
+   * report of the same failure (`opened` rejecting and `done` rejecting) is not handled twice. */
+  private openFailed = false;
+  /** One-shot fault delay (FH-10), consumed by the session's first tool call. */
+  private faultToolDelayMs?: number;
+  /** Fault hold window (FH-03), used once per session. */
+  private readonly faultHoldAudioMs?: number;
+  /** True once a hold has been armed for some turn, so a later turn never starts a new one. */
+  private audioHoldUsed = false;
+  /** Real agent audio buffered for `audioHold.turn` while the FH-03 fault hold is active; the
+   * window resets on every caller segment in that turn, like the filler timer's own stall clock. */
+  private audioHold?: { turn: number; chunks: Body[]; timer: NodeJS.Timeout };
   /** Code of the PO a lookup found most recently. */
   private lastOrder?: string;
 
   constructor(
     private readonly client: BedrockRuntimeClient,
     private readonly listener: SessionListener,
-    rotation: RotatorOptions
+    rotation: RotatorOptions,
+    private readonly options: SessionOptions
   ) {
+    this.faultToolDelayMs = options.fault?.toolDelayMs;
+    this.faultHoldAudioMs = options.fault?.holdAudioMs;
+    this.filler = new FillerTimer(options.fillerStallMs ?? FH03_STALL_MS, {
+      onFire: (turn) => this.onFillerFire(turn),
+    });
     const first = this.connect(SYSTEM_PROMPT);
     first.resume([]);
+    void this.watchOpen(first);
     this.rotator = new Rotator(
       first,
       {
@@ -85,6 +134,11 @@ export class SonicSession {
   /** Sends the closing sequence; `run` resolves once Sonic ends the stream. */
   close(): void {
     this.ending = true;
+    this.filler.stop(); // so a pending or later-scheduled FH-03 timer can't fire after close
+    if (this.audioHold) {
+      clearTimeout(this.audioHold.timer); // so a pending audio-hold release can't fire after close
+      this.audioHold = undefined;
+    }
     this.rotator.close();
   }
 
@@ -120,14 +174,66 @@ export class SonicSession {
           this.rotator.onToolResult(from, rendering);
         },
         callerStillReading: (from) => this.callerStillReading(from),
+        onToolTimeout: (from) => this.onToolTimeout(from),
+        nextToolDelay: () => this.takeToolDelay(),
       },
-      systemPrompt
+      systemPrompt,
+      this.options.toolTimeoutMs
     );
     connection.done.then(
       () => this.onEnded(connection),
       (error: unknown) => this.onEnded(connection, error)
     );
     return connection;
+  }
+
+  /** Resolves the very first open, or hands its rejection to FH-01 (the stream would not open). */
+  private async watchOpen(connection: SonicConnection): Promise<void> {
+    try {
+      await connection.opened;
+    } catch (error) {
+      this.onOpenFailed(connection, error);
+    }
+  }
+
+  private onOpenFailed(connection: SonicConnection, error: unknown): void {
+    if (connection !== this.rotator.current || this.openFailed) return;
+    this.openFailed = true;
+    console.error(`session ${this.id}: Sonic stream would not open`, error);
+    const phrase = this.options.phrases['FH-01'];
+    const turn = this.recorder.onFallback(phrase.text, phrase.pcm.length, this.elapsedMs());
+    this.events.push({ fh: { id: 'FH-01' }, at_ms: this.elapsedMs() });
+    this.listener.onAudio(phrase.pcm, turn);
+    this.ending = true;
+    this.finished.resolve(undefined);
+  }
+
+  /** The next tool call's one-shot fault delay (FH-03/FH-10), if a fault flag set one. */
+  private takeToolDelay(): DelayOptions {
+    const delayMs = this.faultToolDelayMs;
+    this.faultToolDelayMs = undefined;
+    return delayMs ? { delayMs } : {};
+  }
+
+  /** FH-10: a tool call exceeded its timeout; play the filler and trace the event. */
+  private onToolTimeout(from: SonicConnection): void {
+    if (from !== this.rotator.current) return;
+    const turn = this.recorder.currentTurn;
+    if (turn === undefined) return;
+    const phrase = this.options.phrases['FH-10'];
+    this.recorder.onFiller(turn, phrase.pcm.length);
+    this.events.push({ fh: { id: 'FH-10' }, at_ms: this.elapsedMs(), turn });
+    this.listener.onAudio(phrase.pcm, turn);
+    this.log(`FH-10 tool timeout on turn ${turn}: filler played, retrying`);
+  }
+
+  /** FH-03: no agent audio started within the stall window; play the filler once for the turn. */
+  private onFillerFire(turn: number): void {
+    const phrase = this.options.phrases['FH-03'];
+    this.recorder.onFiller(turn, phrase.pcm.length);
+    this.events.push({ fh: { id: 'FH-03' }, at_ms: this.elapsedMs(), turn });
+    this.listener.onAudio(phrase.pcm, turn);
+    this.log(`FH-03 stall on turn ${turn}: filler played`);
   }
 
   private async callerStillReading(from: SonicConnection): Promise<boolean> {
@@ -146,6 +252,7 @@ export class SonicSession {
       if (error) console.error(`session ${this.id}: retired Sonic connection failed`, error);
       return;
     }
+    if (this.openFailed) return;
     if (error) this.finished.reject(error);
     else if (this.ending) this.finished.resolve(undefined);
     else this.finished.reject(new Error('Sonic ended the stream'));
@@ -168,14 +275,61 @@ export class SonicSession {
       if (name === 'toolUse') console.warn(`session ${this.id}: toolUse on a retired connection`);
       return;
     }
+    if (process.env.DEBUG_EVENTS) this.log(`RAW ${name} ${JSON.stringify(body).slice(0, 300)}`);
+    if (name === 'audioOutput') {
+      if (this.isHoldingAudio()) this.audioHold?.chunks.push(body);
+      else this.processAudioOutput(body);
+      return;
+    }
     this.recorder.onEvent(name, body, this.elapsedMs());
     if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'audioOutput') this.onAudio(String(body.content));
     if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
       this.listener.onInterrupted(this.recorder.currentTurn);
+    if (name === 'completionEnd') {
+      this.recorder
+        .onCompletionEnd()
+        .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
+    }
     this.rotator.onOutput(from, name, body);
+  }
+
+  /** Runs one `audioOutput` event through the normal pipeline (ledger, filler cancel, playback). */
+  private processAudioOutput(body: Body): void {
+    this.recorder.onEvent('audioOutput', body, this.elapsedMs());
+    this.filler.audio();
+    this.onAudio(String(body.content));
+    this.rotator.onOutput(this.rotator.current, 'audioOutput', body);
+  }
+
+  private isHoldingAudio(): boolean {
+    return this.audioHold !== undefined && this.audioHold.turn === this.recorder.currentTurn;
+  }
+
+  /**
+   * FH-03 fault: (re)starts buffering `turn`'s real agent audio for `faultHoldAudioMs`, so it
+   * survives a caller reading a code digit by digit across several segments, the same way the
+   * filler timer's own stall clock does. Used once per session: a later turn never starts a hold.
+   */
+  private armAudioHold(turn: number): void {
+    const holdMs = this.faultHoldAudioMs;
+    if (holdMs === undefined) return;
+    if (this.audioHold?.turn === turn) {
+      clearTimeout(this.audioHold.timer);
+      this.audioHold.timer = setTimeout(() => this.releaseAudioHold(), holdMs);
+      return;
+    }
+    if (this.audioHoldUsed) return;
+    this.audioHoldUsed = true;
+    this.audioHold = { turn, chunks: [], timer: setTimeout(() => this.releaseAudioHold(), holdMs) };
+  }
+
+  /** Replays the held audio, in order, once the fault hold's window has passed. */
+  private releaseAudioHold(): void {
+    const hold = this.audioHold;
+    this.audioHold = undefined;
+    hold?.chunks.forEach((body) => this.processAudioOutput(body));
   }
 
   private log(line: string): void {
@@ -202,7 +356,14 @@ export class SonicSession {
     const text = String(body.content);
     if (!this.finalIds.has(id) || isInterruption(text)) return;
     if (role !== 'USER' && role !== 'ASSISTANT') return;
-    if (role === 'USER') this.log(`caller ${JSON.stringify(text)}`);
+    if (role === 'USER') {
+      this.log(`caller ${JSON.stringify(text)}`);
+      const turn = this.recorder.currentTurn;
+      if (turn !== undefined) {
+        this.filler.caller(turn);
+        this.armAudioHold(turn);
+      }
+    }
     this.listener.onTranscript(role, text);
   }
 }

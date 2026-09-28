@@ -4,6 +4,7 @@ import {
   type BedrockRuntimeClient,
   type InvokeModelWithBidirectionalStreamCommandOutput,
 } from '@aws-sdk/client-bedrock-runtime';
+import type { DelayOptions } from 'tools/src/po-status/delay.js';
 import { toolUseToResult } from 'tools/src/po-status/index.js';
 import {
   audioInput,
@@ -18,8 +19,16 @@ import type { HistoryMessage } from './history.js';
 import { AsyncQueue } from './queue.js';
 import { STILL_READING_RESULT } from './reading.js';
 import type { RotatingConnection } from './rotator.js';
+import { callWithTimeout } from './tool-timeout.js';
 
 export const MODEL_ID = 'amazon.nova-2-sonic-v1:0';
+
+/** How long a `get_po_status` call may run before FH-10 plays a filler and retries once. */
+export const TOOL_TIMEOUT_MS = 3000;
+
+/** Spoken when the retry also fails to answer in time; the model is told to speak it exactly. */
+const TOOL_TIMEOUT_APOLOGY =
+  "Sorry, I'm having trouble looking that up right now. Please try again in a moment.";
 
 type Body = Record<string, unknown>;
 
@@ -30,6 +39,10 @@ export interface ConnectionHandlers {
   onToolResult(from: SonicConnection, name: string, rendering: string, found?: string): void;
   /** True to hold a lookup because the caller is still reading the code; the model is told so. */
   callerStillReading(from: SonicConnection): Promise<boolean>;
+  /** FH-10: the tool call has exceeded its timeout; a filler plays and a retry is starting. */
+  onToolTimeout(from: SonicConnection): void;
+  /** One-shot delay (FH-03/FH-10 fault flag) applied to the next tool call only. */
+  nextToolDelay(): DelayOptions;
 }
 
 const encoder = new TextEncoder();
@@ -55,7 +68,8 @@ export class SonicConnection implements RotatingConnection {
   constructor(
     client: BedrockRuntimeClient,
     private readonly handlers: ConnectionHandlers,
-    systemPrompt: string
+    systemPrompt: string,
+    private readonly toolTimeoutMs = TOOL_TIMEOUT_MS
   ) {
     setupEvents(this.ids, systemPrompt).forEach((e) => this.input.push(e));
     const chunks = (async function* (queue: AsyncQueue<SonicInputEvent>) {
@@ -99,12 +113,23 @@ export class SonicConnection implements RotatingConnection {
   private async onToolUse(body: Body): Promise<void> {
     const name = String(body.toolName);
     const reading = await this.handlers.callerStillReading(this);
-    const result = reading ? STILL_READING_RESULT : await toolUseToResult(String(body.content));
+    const result = reading ? STILL_READING_RESULT : await this.runToolCall(String(body.content));
     if (!reading) {
       const { rendering, po } = JSON.parse(result) as { rendering: string; po?: { code: string } };
       this.handlers.onToolResult(this, name, rendering, po?.code);
     }
     const events = toolResultEvents(this.ids.prompt, randomUUID(), String(body.toolUseId), result);
     events.forEach((e) => this.input.push(e));
+  }
+
+  /** Runs `get_po_status` with the FH-10 timeout and one retry; always resolves to a usable result. */
+  private async runToolCall(content: string): Promise<string> {
+    const { content: result } = await callWithTimeout(
+      () => toolUseToResult(content, this.handlers.nextToolDelay()),
+      this.toolTimeoutMs,
+      () => this.handlers.onToolTimeout(this),
+      () => JSON.stringify({ ok: false, reason: 'tool_timeout', rendering: TOOL_TIMEOUT_APOLOGY })
+    );
+    return result;
   }
 }

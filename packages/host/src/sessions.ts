@@ -2,9 +2,10 @@ import type { Server } from 'node:http';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import type { TraceWriter } from 'traces/src/index.js';
 import { WebSocketServer, type WebSocket } from 'ws';
+import type { FixedPhrases } from './phrases/fixed.js';
 import { OUTPUT_RATE } from './sonic/events.js';
 import type { RotatorOptions } from './sonic/rotator.js';
-import { SonicSession } from './sonic/session.js';
+import { SonicSession, type SessionFault } from './sonic/session.js';
 
 /**
  * Messages the host sends as JSON text frames; agent audio goes out as binary frames. A `turn`
@@ -59,12 +60,40 @@ export interface SessionDeps {
   /** Checked against the `code` query parameter on connect; wrong or missing is rejected first. */
   accessCode: string;
   notices: SessionNotices;
+  /** The captured FH-01/03/10 audio and text (S15), played for their failure behaviours. */
+  phrases: FixedPhrases;
   limits?: Partial<SessionLimits>;
 }
 
 /** Turn indices used for notice audio, well outside the range of real (non-negative) Sonic turns. */
 const WARNING_TURN = -1;
 const EXPIRED_TURN = -2;
+
+/**
+ * Demo-only fault flag, `?fault=fh01|fh03|fh10` on `/ws` (never enabled by default): forces one of
+ * the three failure behaviours to trigger reliably, instead of waiting for a real stream-open
+ * failure or a slow lookup. `fh01` makes the Sonic stream fail to open, without any real Bedrock
+ * call. `fh03` holds the session's first turn's real agent audio back for `FAULT_HOLD_AUDIO_MS`,
+ * so the stall (and hence the filler) happens regardless of what Sonic says or how fast the
+ * lookup is; Sonic sometimes speaks something (e.g. "Let me check that.") well inside the 1.5 s
+ * stall window on its own, which used to make the flag unreliable. `fh10` makes the session's
+ * first `get_po_status` call wait `FAULT_TOOL_DELAY_MS`, past the tool timeout, so the first
+ * attempt times out and the (undelayed) retry answers normally.
+ */
+const FAULT_HOLD_AUDIO_MS = 1800;
+const FAULT_TOOL_DELAY_MS = 4000;
+
+function faultFor(flag: string | null): SessionFault {
+  if (flag === 'fh03') return { holdAudioMs: FAULT_HOLD_AUDIO_MS };
+  if (flag === 'fh10') return { toolDelayMs: FAULT_TOOL_DELAY_MS };
+  return {};
+}
+
+/** A client whose stream never opens, for the `fault=fh01` flag; makes no real Bedrock call. */
+function failingClient(): BedrockRuntimeClient {
+  const send = () => Promise.reject(new Error('FH-01 fault flag: stream open forced to fail'));
+  return { send } as unknown as BedrockRuntimeClient;
+}
 
 /**
  * Serves Sonic sessions on `/ws`: binary frames in are 16 kHz caller PCM, binary frames out are
@@ -79,12 +108,13 @@ export function attachSessions(server: Server, deps: SessionDeps): void {
   const limits = { ...DEFAULT_LIMITS, ...deps.limits };
   let active = 0;
   wss.on('connection', (socket, request) => {
-    const code = new URL(request.url ?? '', 'http://host').searchParams.get('code');
+    const params = new URL(request.url ?? '', 'http://host').searchParams;
+    const code = params.get('code');
     if (code === null) return reject(socket, 4401, 'missing access code');
     if (code !== deps.accessCode) return reject(socket, 4401, 'wrong access code');
     if (active >= limits.maxConcurrent) return reject(socket, 4429, 'too many concurrent sessions');
     active++;
-    void serve(socket, deps, limits).finally(() => {
+    void serve(socket, deps, limits, params.get('fault')).finally(() => {
       active--;
     });
   });
@@ -102,13 +132,15 @@ function durationMs(pcm: Buffer): number {
 
 async function serve(
   socket: WebSocket,
-  { client, writer, rotation, notices }: SessionDeps,
-  limits: SessionLimits
+  { client, writer, rotation, notices, phrases }: SessionDeps,
+  limits: SessionLimits,
+  faultFlag: string | null
 ): Promise<void> {
   const send = (message: HostMessage) => socket.send(JSON.stringify(message));
   let audioTurn: number | undefined;
+  const fault = faultFor(faultFlag);
   const session = new SonicSession(
-    client,
+    faultFlag === 'fh01' ? failingClient() : client,
     {
       onAudio: (pcm, turn) => {
         if (turn !== undefined && turn !== audioTurn) send({ type: 'turn', index: turn });
@@ -118,7 +150,8 @@ async function serve(
       onInterrupted: (turn) => send({ type: 'flush', turn }),
       onTranscript: (role, text) => send({ type: 'transcript', role, text }),
     },
-    rotation
+    rotation,
+    { phrases, fault }
   );
 
   /** Plays a notice directly on the socket; a fresh `turn` frame follows once Sonic next speaks. */
