@@ -13,6 +13,18 @@ function build(props: { expiresAt?: string } = { expiresAt: EXPIRES_AT }) {
   return { stack, template: Template.fromStack(stack) };
 }
 
+interface Statement {
+  Action: string | string[];
+  Resource: unknown;
+}
+
+/** The statements of the host task role's own policy, in order. */
+function taskRoleStatements(template: Template): Statement[] {
+  const policies = template.findResources('AWS::IAM::Policy');
+  const id = Object.keys(policies).find((key) => key.startsWith('HostTaskTaskRoleDefaultPolicy'));
+  return policies[id as string].Properties.PolicyDocument.Statement;
+}
+
 describe('AppStack tags', () => {
   it('refuses to build without a valid ExpiresAt', () => {
     expect(() => build({})).toThrow(/ExpiresAt/);
@@ -115,21 +127,56 @@ describe('AppStack service', () => {
     });
   });
 
-  it('lets the task role call Nova 2 Sonic and nothing wider on Bedrock', () => {
+  it('grants the task role exactly Sonic, the Connect flow and trace writes', () => {
+    const statements = taskRoleStatements(build().template);
+    expect(statements.map((s) => s.Action)).toEqual([
+      'bedrock:InvokeModel',
+      'connect:StartWebRTCContact',
+      's3:PutObject',
+    ]);
+  });
+
+  it('lets the task role invoke only Nova 2 Sonic: InvokeModel authorizes the bidirectional stream', () => {
+    const [bedrock] = taskRoleStatements(build().template);
+    expect(JSON.stringify(bedrock.Resource)).toMatch(/foundation-model\/amazon\.nova-2-sonic-v1:0/);
+  });
+
+  it("lets the task role start WebRTC contacts only on this account's contact flows", () => {
+    const connect = taskRoleStatements(build().template)[1];
+    expect(connect.Resource).toEqual({
+      'Fn::Join': [
+        '',
+        [
+          'arn:',
+          { Ref: 'AWS::Partition' },
+          ':connect:',
+          { Ref: 'AWS::Region' },
+          ':',
+          { Ref: 'AWS::AccountId' },
+          ':instance/*/contact-flow/*',
+        ],
+      ],
+    });
+  });
+
+  it('needs no SSM parameter types: the CDK deploy role may read only the bootstrap version', () => {
+    const parameters = Object.keys(build().template.toJSON().Parameters ?? {});
+    expect(parameters).toEqual(['BootstrapVersion']);
+  });
+
+  it('tells the host which bucket to write traces to', () => {
     const { template } = build();
-    template.hasResourceProperties('AWS::IAM::Policy', {
-      PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({
-            Action: 'bedrock:InvokeModelWithBidirectionalStream',
-            Resource: Match.objectLike({
-              'Fn::Join': Match.arrayWith([
-                Match.arrayWith([Match.stringLikeRegexp('amazon.nova-2-sonic-v1:0')]),
-              ]),
-            }),
-          }),
-        ]),
-      },
+    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+      ContainerDefinitions: Match.arrayWith([
+        Match.objectLike({
+          Environment: Match.arrayWith([
+            {
+              Name: 'TRACES_BUCKET',
+              Value: { 'Fn::Join': ['', ['supplier-line-traces-', { Ref: 'AWS::AccountId' }]] },
+            },
+          ]),
+        }),
+      ]),
     });
   });
 
