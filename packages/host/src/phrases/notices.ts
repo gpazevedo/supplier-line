@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { assetsDir } from './assets.js';
 import type { SessionNotices } from '../sessions.js';
-
-const NOTICES_DIR = fileURLToPath(new URL('../../../../assets/notices/', import.meta.url));
 
 /** Text spoken by each notice; captured to WAV by `pnpm --filter host capture-notices`. */
 export const SESSION_NOTICES = {
@@ -28,7 +27,7 @@ function pcmFromWav(wav: Buffer): Buffer {
 /** Loads the session-cap notices captured under `assets/notices/`. */
 export function loadSessionNotices(): SessionNotices {
   return {
-    warning: pcmFromWav(readFileSync(`${NOTICES_DIR}${SESSION_NOTICES.warning.file}`)),
-    expired: pcmFromWav(readFileSync(`${NOTICES_DIR}${SESSION_NOTICES.expired.file}`)),
+    warning: pcmFromWav(readFileSync(join(assetsDir(), 'notices', SESSION_NOTICES.warning.file))),
+    expired: pcmFromWav(readFileSync(join(assetsDir(), 'notices', SESSION_NOTICES.expired.file))),
   };
 }

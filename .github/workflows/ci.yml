@@ -39,5 +39,17 @@ jobs:
           context: .
           platforms: linux/arm64
           push: false
+          load: true
+          tags: supplier-line-host:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # The image must start, not only build: wait for its own HEALTHCHECK, under QEMU.
+      - run: |
+          docker run -d --name host -e DEMO_ACCESS_CODE=ci-only supplier-line-host:ci
+          for _ in $(seq 60); do
+            [ "$(docker inspect -f '{{.State.Health.Status}}' host)" = healthy ] && exit 0
+            [ "$(docker inspect -f '{{.State.Running}}' host)" = true ] || break
+            sleep 5
+          done
+          docker logs host
+          exit 1

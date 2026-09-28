@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { assetsDir } from './assets.js';
 import { FIXED_PHRASES, type FixedPhrase } from 'tools/src/phrases/index.js';
 
-const PHRASES_DIR = fileURLToPath(new URL('../../../../assets/phrases/', import.meta.url));
 const VARIANT = 1;
 
 export interface FixedPhraseAudio {
@@ -32,7 +32,7 @@ export function loadFixedPhrases(): FixedPhrases {
       phrase.id,
       {
         text: phrase.text,
-        pcm: pcmFromWav(readFileSync(`${PHRASES_DIR}${phrase.id}-${VARIANT}.wav`)),
+        pcm: pcmFromWav(readFileSync(join(assetsDir(), 'phrases', `${phrase.id}-${VARIANT}.wav`))),
       },
     ])
   ) as FixedPhrases;
