@@ -61,11 +61,14 @@ export class ReaperConstruct extends Construct {
     });
   }
 
-  /** Listing needs `*`; deleting stacks and scaling services is limited to resources tagged ephemeral. */
+  /** Listing needs `*` (DescribeStacks with no name also needs ListStacks); deleting stacks and scaling services is limited to resources tagged ephemeral. */
   private grantReaping() {
     const ephemeralOnly = { StringEquals: { [`aws:ResourceTag/${EPHEMERAL_TAG}`]: 'true' } };
     this.role.addToPolicy(
-      new PolicyStatement({ actions: ['cloudformation:DescribeStacks'], resources: ['*'] })
+      new PolicyStatement({
+        actions: ['cloudformation:DescribeStacks', 'cloudformation:ListStacks'],
+        resources: ['*'],
+      })
     );
     this.role.addToPolicy(
       new PolicyStatement({
@@ -88,7 +91,8 @@ export class ReaperConstruct extends Construct {
     const validations = Validations.of(this.role);
     validations.acknowledge({
       id: 'AwsSolutions-IAM5[Resource::*]',
-      reason: 'cloudformation:DescribeStacks must list all stacks to find tagged ones.',
+      reason:
+        'DescribeStacks with no name, which also needs ListStacks, is the only way to list stacks with their tags.',
     });
     for (const arn of TAG_SCOPED_ARNS) {
       validations.acknowledge({
@@ -114,6 +118,7 @@ export class ReaperConstruct extends Construct {
     });
   }
 
+  /** The SSL-only topic policy replaces SNS's default one, so the alarm needs its own Allow. */
   private addErrorAlarm() {
     const alarm = this.function
       .metricErrors({ period: Duration.minutes(10), statistic: 'Sum' })
@@ -126,5 +131,14 @@ export class ReaperConstruct extends Construct {
         treatMissingData: TreatMissingData.NOT_BREACHING,
       });
     alarm.addAlarmAction(new SnsAction(this.alerts));
+    this.alerts.addToResourcePolicy(
+      new PolicyStatement({
+        sid: 'AllowErrorAlarmPublish',
+        principals: [new ServicePrincipal('cloudwatch.amazonaws.com')],
+        actions: ['sns:Publish'],
+        resources: [this.alerts.topicArn],
+        conditions: { ArnEquals: { 'aws:SourceArn': alarm.alarmArn } },
+      })
+    );
   }
 }
