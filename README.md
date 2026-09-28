@@ -16,7 +16,8 @@ A caller says a code such as "P O one zero four eight two". The agent looks it u
 | Caller-clip player, fixed phrases                                             | Built       |
 | CDK persistent and app stacks, reaper, GitHub workflows                       | Built       |
 | Access code, 15-minute cap, 2 concurrent sessions, `/api/connect/start` (S17) | Built       |
-| Failure behaviours (S14), Connect calling page (S18)                          | In progress |
+| Failure behaviours: fallback phrase, filler at 1.5 s, tool retry (S14)        | Built       |
+| Connect calling page (S18)                                                    | In progress |
 | Final review (S19), README and ADRs (S20)                                     | Planned     |
 
 Known issues:
