@@ -135,6 +135,61 @@ describe('softphone accessibility', () => {
   );
 });
 
+describe('Connect calling page accessibility', () => {
+  it(
+    'has no WCAG 2.2 AA violations idle',
+    async () => {
+      const page = await browser.newPage();
+      await page.goto(`${baseUrl}/connect.html`);
+      await page.getByRole('button', { name: 'Call' }).waitFor();
+
+      const results = await axeCheck(page);
+      expect(results.violations, describeViolations(results)).toEqual([]);
+      await page.close();
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'has no WCAG 2.2 AA violations in a simulated call',
+    async () => {
+      const page = await browser.newPage();
+      await page.addInitScript(stubConnectCall);
+      await page.goto(`${baseUrl}/connect.html`);
+      await page.getByRole('button', { name: 'Call' }).click();
+      await page.getByRole('button', { name: 'Hang up' }).waitFor();
+      await page.locator('.transcript li').nth(1).waitFor();
+
+      const results = await axeCheck(page);
+      expect(results.violations, describeViolations(results)).toEqual([]);
+      await page.close();
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'has no WCAG 2.2 AA violations after the call ends on a failure',
+    async () => {
+      const page = await browser.newPage();
+      await page.addInitScript(stubConnectCall);
+      await page.goto(`${baseUrl}/connect.html`);
+      await page.getByRole('button', { name: 'Call' }).click();
+      await page.getByRole('button', { name: 'Hang up' }).waitFor();
+      await page.evaluate(() => {
+        (
+          window as unknown as { __stopLastSession: (isFailure: boolean) => void }
+        ).__stopLastSession(true);
+      });
+      await page.getByRole('button', { name: 'Call' }).waitFor();
+
+      const results = await axeCheck(page);
+      expect(results.violations, describeViolations(results)).toEqual([]);
+      await page.close();
+    },
+    TEST_TIMEOUT_MS
+  );
+});
+
 /* eslint-disable @typescript-eslint/no-empty-function -- test doubles that intentionally do nothing */
 /** Stubs getUserMedia, AudioContext/AudioWorkletNode and WebSocket so `call()` runs without real hardware. */
 function stubCallHardware(): void {
@@ -177,4 +232,47 @@ function stubCallHardware(): void {
     }
   }
   (window as unknown as { AudioContext: unknown }).AudioContext = FakeAudioContext;
+}
+
+interface FakeObserver {
+  audioVideoDidStart?: () => void;
+  audioVideoDidStop?: (status: { isFailure(): boolean; statusCode(): number }) => void;
+}
+
+/**
+ * Stubs `fetch` and installs `window.__buildMeetingSession` (read by `connect/meeting.ts`) so
+ * `call()` reaches an in-call state without a running host or real WebRTC signalling. Also exposes
+ * `window.__stopLastSession(isFailure)` so a test can drive the call to an ended state.
+ */
+function stubConnectCall(): void {
+  (window as unknown as { fetch: unknown }).fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      connectionData: { Meeting: {}, Attendee: {} },
+      contactId: 'contact-1',
+      participantId: 'participant-1',
+      participantToken: 'participant-token',
+    }),
+  });
+
+  let lastObserver: FakeObserver | undefined;
+  (
+    window as unknown as { __buildMeetingSession: (connectionData: unknown) => unknown }
+  ).__buildMeetingSession = () => ({
+    audioVideo: {
+      addObserver: (observer: FakeObserver) => {
+        lastObserver = observer;
+      },
+      listAudioInputDevices: async () => [],
+      startAudioInput: async () => undefined,
+      bindAudioElement: async () => undefined,
+      start: () => lastObserver?.audioVideoDidStart?.(),
+      stop: () =>
+        lastObserver?.audioVideoDidStop?.({ isFailure: () => false, statusCode: () => 1 }),
+    },
+  });
+  (window as unknown as { __stopLastSession: (isFailure: boolean) => void }).__stopLastSession = (
+    isFailure: boolean
+  ) => lastObserver?.audioVideoDidStop?.({ isFailure: () => isFailure, statusCode: () => 6 });
 }

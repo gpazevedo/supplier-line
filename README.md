@@ -8,22 +8,23 @@ A caller says a code such as "P O one zero four eight two". The agent looks it u
 
 ## Status
 
-| Area                                                                          | State       |
-| ----------------------------------------------------------------------------- | ----------- |
-| PO data, renderings, `get_po_status`, traces and trace checks, viewer         | Built       |
-| Session host: Sonic streaming, barge-in, playback ledger, session rotation    | Built       |
-| Softphone and trace viewer, WCAG 2.2 AA checked with axe                      | Built       |
-| Caller-clip player, fixed phrases                                             | Built       |
-| CDK persistent and app stacks, reaper, GitHub workflows                       | Built       |
-| Access code, 15-minute cap, 2 concurrent sessions, `/api/connect/start` (S17) | Built       |
-| Failure behaviours: fallback phrase, filler at 1.5 s, tool retry (S14)        | Built       |
-| Connect calling page (S18)                                                    | In progress |
-| Final review (S19), README and ADRs (S20)                                     | Planned     |
+| Area                                                                          | State   |
+| ----------------------------------------------------------------------------- | ------- |
+| PO data, renderings, `get_po_status`, traces and trace checks, viewer         | Built   |
+| Session host: Sonic streaming, barge-in, playback ledger, session rotation    | Built   |
+| Softphone and trace viewer, WCAG 2.2 AA checked with axe                      | Built   |
+| Caller-clip player, fixed phrases                                             | Built   |
+| CDK persistent and app stacks, reaper, GitHub workflows                       | Built   |
+| Access code, 15-minute cap, 2 concurrent sessions, `/api/connect/start` (S17) | Built   |
+| Failure behaviours: fallback phrase, filler at 1.5 s, tool retry (S14)        | Built   |
+| Connect calling page (S18), pending a human's audio check                     | Built   |
+| Final review (S19), README and ADRs (S20)                                     | Planned |
 
 Known issues:
 
 - Sonic still occasionally mishears a code (for example it hears only three digits). The host holds any lookup the caller has not finished reading, and the check digit turns every mishearing into "please say it again", so no other order's data is spoken. Across rotations, codes and follow-ups are now answered through the tool.
 - Before H3: `demo-up`'s smoke job runs the trace checks on the committed fixtures only. The deployed host writes its traces to the traces bucket, so the live traces are not checked yet.
+- S18: the Connect calling page (`packages/web/connect.html`) is built and axe-checked, `/api/connect/start` now checks the same access code as `/ws`, but a real call and the flow's error branch still need a human with a mic and speakers (see `packages/web/README.md`); there's no automated end-to-end check for the Connect path.
 
 ## Run it locally
 

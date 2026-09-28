@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "amazon-chime-sdk-js": "^3.32.0",
     "traces": "workspace:^"
   },
   "devDependencies": {
