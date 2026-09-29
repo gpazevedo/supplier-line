@@ -18,6 +18,7 @@ import { getPoStatus } from 'tools/src/po-status/index.js';
 import { OUTPUT_RATE } from 'host/src/sonic/events.js';
 import { parseReplayClipsArgs, resolveOutDir } from './replay-clips-args.js';
 import { rotationCheck } from './rotation-check.js';
+import { writeReplayReport } from './replay-report.js';
 
 const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 const CLIPS_DIR = new URL('../../../fixtures/clips/', import.meta.url);
@@ -157,6 +158,6 @@ for (const scenario of [...shortScenarios, longScenario]) {
 
 console.log('\n=== summary ===');
 for (const r of results) console.log(`${r.pass ? 'PASS' : 'FAIL'} ${r.name}`);
-await writeFile(join(outDir, 'report.json'), JSON.stringify(results, null, 2));
+await writeReplayReport(outDir, results);
 
 if (results.some((r) => !r.pass)) process.exit(1);
