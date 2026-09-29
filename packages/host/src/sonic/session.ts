@@ -281,7 +281,15 @@ export class SonicSession {
     else this.finished.reject(new Error('Sonic ended the stream'));
   }
 
+  /** Keeps agent text whose FINAL never came; its connection has finished or been retired. */
+  private recoverUnconfirmedText(): void {
+    this.recorder
+      .onCompletionEnd()
+      .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
+  }
+
   private onRotated({ gapMs, audioInMs, audioForwardedMs }: RotationStats): void {
+    this.recoverUnconfirmedText();
     const turn = this.recorder.currentTurn;
     const event: TraceEvent = {
       fh: { id: 'FH-05' },
@@ -316,11 +324,7 @@ export class SonicSession {
     if (name === 'userSpeechEnd') this.filler.speechEnded();
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'completionEnd') {
-      this.recorder
-        .onCompletionEnd()
-        .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
-    }
+    if (name === 'completionEnd') this.recoverUnconfirmedText();
     this.rotator.onOutput(from, name, body);
   }
 

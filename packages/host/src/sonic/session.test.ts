@@ -412,3 +412,32 @@ describe('SonicSession interventions', () => {
     session.close();
   });
 });
+
+describe('SonicSession rotation', () => {
+  it('keeps agent text whose FINAL never came when a rotation retires its connection', async () => {
+    // A long rendering's last FINAL sometimes never arrives; it was recovered only from the
+    // connection's completionEnd, which a retired connection no longer delivers.
+    const sc = scriptedClient();
+    const { listener, transcripts } = fakeListener();
+    const rotation = {
+      thresholdMs: 20,
+      bufferMs: 0,
+      audioStartTimeoutMs: 10,
+      handoverTimeoutMs: 10,
+    };
+    const session = new SonicSession(sc.client, listener, rotation, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'hello').forEach(sc.emit);
+    agentSaid('s1', 'SPECULATIVE', 'Hello there.').forEach(sc.emit);
+    await wait(150);
+
+    expect(session.trace().events.map((event) => event.fh.id)).toContain('FH-05');
+    expect(session.trace().turns[0].assistant.final_text).toBe('Hello there.');
+    expect(transcripts).toContainEqual({ role: 'ASSISTANT', text: 'Hello there.' });
+    session.close();
+  });
+});
