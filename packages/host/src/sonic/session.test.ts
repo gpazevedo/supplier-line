@@ -2,6 +2,7 @@ import { setTimeout as wait } from 'node:timers/promises';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { describe, expect, it } from 'vitest';
 import type { FixedPhrases } from '../phrases/fixed.js';
+import { LOOK_UP_FIRST, SPEAK_NOW } from './interventions.js';
 import { AsyncQueue } from './queue.js';
 import { SonicSession, type SessionListener } from './session.js';
 
@@ -321,6 +322,93 @@ describe('SonicSession failure behaviours', () => {
       ok: boolean;
     };
     expect(content.ok).toBe(true); // the undelayed retry succeeded
+    session.close();
+  });
+});
+
+/** An agent text segment at `stage`, as Sonic streams it. */
+function agentSaid(contentId: string, stage: 'SPECULATIVE' | 'FINAL', content: string): Body[] {
+  const fields = `{"generationStage":"${stage}"}`;
+  return [
+    { contentStart: { contentId, role: 'ASSISTANT', type: 'TEXT', additionalModelFields: fields } },
+    { textOutput: { contentId, content } },
+  ];
+}
+
+const sentTexts = (input: Body[]) =>
+  input.flatMap((event) =>
+    'textInput' in event ? [String((event.textInput as Body).content)] : []
+  );
+
+describe('SonicSession interventions', () => {
+  const PO_ANSWER = 'Purchase order one zero four eight two from Summit Fasteners has shipped.';
+
+  it('B: mutes an answer that speaks PO data with no lookup and asks Sonic to look it up', async () => {
+    const sc = scriptedClient();
+    const { listener, audio } = fakeListener();
+    const flushed: (number | undefined)[] = [];
+    listener.onInterrupted = (turn) => flushed.push(turn);
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'status of p o one zero four eight two').forEach(sc.emit);
+    agentSaid('s1', 'SPECULATIVE', PO_ANSWER).forEach(sc.emit);
+    sc.emit({ audioOutput: { contentId: 'a1', content: Buffer.alloc(480).toString('base64') } });
+    agentSaid('f1', 'FINAL', PO_ANSWER).forEach(sc.emit);
+    await wait(20);
+
+    expect(audio).toEqual([]);
+    expect(flushed).toEqual([0]);
+    expect(sentTexts(sc.input).at(-1)).toBe(LOOK_UP_FIRST);
+    const [turn] = session.trace().turns;
+    expect(turn.interventions).toEqual(['blocked-answer']);
+    expect(turn.assistant.final_text).toBe('');
+    session.close();
+  });
+
+  it('B: ignores a late FINAL of an earlier answer that lands in the next turn', async () => {
+    const sc = scriptedClient();
+    const { listener } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'hello').forEach(sc.emit);
+    agentSaid('s1', 'SPECULATIVE', 'Hi.').forEach(sc.emit);
+    callerSaid('u2', 'wait').forEach(sc.emit);
+    agentSaid('f1', 'FINAL', PO_ANSWER).forEach(sc.emit);
+    await wait(20);
+
+    expect(sentTexts(sc.input)).not.toContain(LOOK_UP_FIRST);
+    session.close();
+  });
+
+  it('A: asks Sonic to speak a lookup result it ended its response without speaking', async () => {
+    const sc = scriptedClient();
+    const { listener } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+      nudgeAfterMs: 30,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'status of p o one zero four eight two').forEach(sc.emit);
+    sc.emit({
+      toolUse: { toolUseId: 't1', toolName: 'get_po_status', content: '{"po_code":"PO-10482"}' },
+    });
+    await wait(20);
+    agentSaid('f1', 'FINAL', 'Let me check that.').forEach(sc.emit);
+    sc.emit({ contentEnd: { contentId: 'f1', type: 'TEXT', stopReason: 'END_TURN' } });
+    await wait(80);
+
+    expect(sentTexts(sc.input).at(-1)).toBe(SPEAK_NOW);
+    expect(session.trace().turns[0].interventions).toEqual(['prompt-to-speak']);
     session.close();
   });
 });

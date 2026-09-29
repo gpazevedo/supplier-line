@@ -87,6 +87,26 @@ function textBlock(
   ];
 }
 
+/** Cross-modal input: a USER text message sent mid-conversation, which Sonic responds to. */
+export function userTextEvents(
+  promptName: string,
+  contentName: string,
+  content: string
+): SonicInputEvent[] {
+  return [
+    ev('contentStart', {
+      promptName,
+      contentName,
+      type: 'TEXT',
+      interactive: true,
+      role: 'USER',
+      textInputConfiguration: text,
+    }),
+    ev('textInput', { promptName, contentName, content }),
+    ev('contentEnd', { promptName, contentName }),
+  ];
+}
+
 /** One chunk of 16-bit PCM caller audio. */
 export function audioInput(ids: SessionIds, pcm: Buffer): SonicInputEvent {
   return ev('audioInput', {

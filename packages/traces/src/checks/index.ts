@@ -1,3 +1,4 @@
+import { speaksPoData } from '../po-data.js';
 import type { Trace } from '../schema.js';
 
 type Turn = Trace['turns'][number];
@@ -45,17 +46,10 @@ function exactRendering(turn: Turn): Failure[] {
   return [failure('exact-rendering', `turn ${turn.index}`, `final_text lacks "${tool.rendering}"`)];
 }
 
-const PO_DATA = [
-  /\bpurchase order (P O dash )?[a-z -]+ from [A-Z]/i,
-  /\b(has shipped|is delayed|was delivered|was cancelled)\b/i,
-  /\b(euros|dollars|pounds)\b/i,
-  /\b(January|February|March|April|May|June|July|August|September|October|November|December) [a-z-]+(st|nd|rd|th)\b/,
-];
-
 /** A turn that speaks PO data (code with supplier, status, amount or a date) has a tool result. */
 function groundedPoData(turn: Turn): Failure[] {
   const text = turn.assistant.final_text;
-  if (turn.tool || !PO_DATA.some((pattern) => pattern.test(text))) return [];
+  if (turn.tool || !speaksPoData(text)) return [];
   return [
     failure(
       'grounded-po-data',

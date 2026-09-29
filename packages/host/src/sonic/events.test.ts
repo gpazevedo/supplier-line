@@ -5,6 +5,7 @@ import {
   resumeEvents,
   setupEvents,
   toolResultEvents,
+  userTextEvents,
   type SonicInputEvent,
 } from './events.js';
 import { CONTINUED_PROMPT, continuedPrompt, SYSTEM_PROMPT } from './prompt.js';
@@ -140,4 +141,25 @@ it('resumeEvents replays history as non-interactive TEXT blocks before the audio
   expect(assistantStart).toMatchObject({ role: 'ASSISTANT' });
   expect(assistantStart.contentName).not.toBe(userStart.contentName);
   expect(body(events[6])).toMatchObject({ contentName: 'a1', type: 'AUDIO', interactive: true });
+});
+
+describe('userTextEvents', () => {
+  it('sends a cross-modal USER text message, interactive, in its own content block', () => {
+    const events = userTextEvents('p1', 'c9', 'Please continue.');
+    expect(events.map(nameOf)).toEqual(['contentStart', 'textInput', 'contentEnd']);
+    expect(body(events[0])).toEqual({
+      promptName: 'p1',
+      contentName: 'c9',
+      type: 'TEXT',
+      interactive: true,
+      role: 'USER',
+      textInputConfiguration: { mediaType: 'text/plain' },
+    });
+    expect(body(events[1])).toEqual({
+      promptName: 'p1',
+      contentName: 'c9',
+      content: 'Please continue.',
+    });
+    expect(body(events[2])).toEqual({ promptName: 'p1', contentName: 'c9' });
+  });
 });
