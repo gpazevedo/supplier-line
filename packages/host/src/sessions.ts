@@ -8,7 +8,9 @@ import type { RotatorOptions } from './sonic/rotator.js';
 import { SonicSession, type SessionFault } from './sonic/session.js';
 
 /**
- * Messages the host sends as JSON text frames; agent audio goes out as binary frames. A `turn`
+ * Messages the host sends as JSON text frames; agent audio goes out as binary frames. `ready`
+ * means Sonic is listening: caller audio sent before it is dropped, so a client starts the caller
+ * speaking only after it. A `turn`
  * marker precedes the first audio of each turn; `flush` means drop all queued agent audio, and
  * names the interrupted turn, which may not have sent any audio yet. `trace` carries the finished
  * session's own trace and where it was written, so a remote caller (the live smoke job) can check
@@ -16,6 +18,7 @@ import { SonicSession, type SessionFault } from './sonic/session.js';
  * starting (S17).
  */
 export type HostMessage =
+  | { type: 'ready' }
   | { type: 'transcript'; role: 'USER' | 'ASSISTANT'; text: string }
   | { type: 'turn'; index: number }
   | { type: 'flush'; turn?: number }
@@ -160,6 +163,7 @@ async function serve(
       },
       onInterrupted: (turn) => send({ type: 'flush', turn }),
       onTranscript: (role, text) => send({ type: 'transcript', role, text }),
+      onReady: () => send({ type: 'ready' }),
     },
     rotation,
     { phrases, fault }

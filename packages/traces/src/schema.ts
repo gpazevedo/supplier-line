@@ -19,6 +19,9 @@ const turnSchema = z.object({
   tool: z.object({ name: z.string(), rendering: z.string() }).optional(),
   // Lookups refused because the caller was still reading the code.
   early_tool_calls: z.number().int().positive().optional(),
+  // The host's cross-modal nudges to Sonic: asking it to speak a result it left unspoken, or
+  // muting an answer that spoke PO data with no lookup and asking it to look up first.
+  interventions: z.array(z.enum(['prompt-to-speak', 'blocked-answer'])).optional(),
   assistant: z.object({ final_text: z.string() }),
 });
 

@@ -77,9 +77,11 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
   let rejectedReason: string | undefined;
   let endRequested = false;
   let closedUnexpectedly: { code: number; reason: string } | undefined;
+  const ready = Promise.withResolvers<undefined>();
 
   socket.on('close', (code, reason) => {
     if (!endRequested) closedUnexpectedly = { code, reason: reason.toString() };
+    ready.resolve(undefined);
   });
   socket.on('message', (data, isBinary) => {
     lastHeardAt = Date.now();
@@ -92,6 +94,7 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     }
     const message = JSON.parse(String(data)) as HostMessage;
     if (message.type === 'rejected') rejectedReason = message.reason;
+    if (message.type === 'ready') ready.resolve(undefined);
     if (message.type === 'trace') [tracePath, trace] = [message.path, message.trace];
     if (message.type === 'turn') player.startTurn(message.index);
     if (message.type === 'flush') {
@@ -117,6 +120,8 @@ export async function runClip(options: RunClipOptions): Promise<RunClipResult> {
     );
   }
 
+  // The host drops caller audio until Sonic is listening, so the caller starts speaking then.
+  await ready.promise;
   const started = Date.now();
   const silence = Buffer.alloc(FRAME_BYTES);
   const loopForMs = options.loopForMs ?? 0;

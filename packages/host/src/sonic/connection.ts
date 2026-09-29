@@ -12,6 +12,7 @@ import {
   resumeEvents,
   setupEvents,
   toolResultEvents,
+  userTextEvents,
   type SessionIds,
   type SonicInputEvent,
 } from './events.js';
@@ -86,6 +87,11 @@ export class SonicConnection implements RotatingConnection {
   resume(history: HistoryMessage[]): void {
     resumeEvents(this.ids, history).forEach((e) => this.input.push(e));
     this.resumed = true;
+  }
+
+  /** Sends Sonic a text message as the user (cross-modal input). */
+  sendText(text: string): void {
+    userTextEvents(this.ids.prompt, randomUUID(), text).forEach((e) => this.input.push(e));
   }
 
   sendAudio(pcm: Buffer): boolean {

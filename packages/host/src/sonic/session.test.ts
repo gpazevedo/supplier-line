@@ -2,6 +2,7 @@ import { setTimeout as wait } from 'node:timers/promises';
 import type { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime';
 import { describe, expect, it } from 'vitest';
 import type { FixedPhrases } from '../phrases/fixed.js';
+import { LOOK_UP_FIRST, SPEAK_NOW } from './interventions.js';
 import { AsyncQueue } from './queue.js';
 import { SonicSession, type SessionListener } from './session.js';
 
@@ -50,12 +51,17 @@ function scriptedClient() {
   };
 }
 
-/** A caller's FINAL transcript segment for a fresh content block. */
-function callerSaid(contentId: string, content: string): Body[] {
+/** A caller's FINAL transcript segment for a fresh content block, still mid-speech. */
+function callerSegment(contentId: string, content: string): Body[] {
   return [
     { contentStart: { contentId, role: 'USER', additionalModelFields: '{"stage":"FINAL"}' } },
     { textOutput: { contentId, content } },
   ];
+}
+
+/** A caller's whole utterance: its transcript, then Sonic detecting the end of speech. */
+function callerSaid(contentId: string, content: string): Body[] {
+  return [...callerSegment(contentId, content), { userSpeechEnd: {} }];
 }
 
 function fakePhrases(): FixedPhrases {
@@ -69,13 +75,42 @@ function fakePhrases(): FixedPhrases {
 function fakeListener() {
   const audio: { pcm: Buffer; turn: number | undefined }[] = [];
   const transcripts: { role: string; text: string }[] = [];
+  const ready: number[] = [];
   const listener: SessionListener = {
     onAudio: (pcm, turn) => audio.push({ pcm, turn }),
     onInterrupted: () => undefined,
     onTranscript: (role, text) => transcripts.push({ role, text }),
+    onReady: () => ready.push(Date.now()),
   };
-  return { listener, audio, transcripts };
+  return { listener, audio, transcripts, ready };
 }
+
+describe('SonicSession readiness', () => {
+  it('drops caller audio until Sonic sends its first event, then reports ready once', async () => {
+    // A late-opening stream used to get the caller's queued audio as a backlog; Sonic consumed it
+    // faster than real time, its playback clock ran ahead of the caller's, and a barge-in near the
+    // end of an answer was taken as a new turn with no INTERRUPTED (live barge-in failure).
+    const sc = scriptedClient();
+    const { listener, ready } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, { phrases: fakePhrases() });
+    await sc.opened;
+    const audioIn = () => sc.input.filter((event) => 'audioInput' in event).length;
+
+    session.sendAudio(Buffer.alloc(1024));
+    await wait(10);
+    expect(audioIn()).toBe(0);
+    expect(ready).toHaveLength(0);
+
+    sc.emit({ usageEvent: {} });
+    sc.emit({ usageEvent: {} });
+    await wait(10);
+    session.sendAudio(Buffer.alloc(1024));
+    await wait(10);
+    expect(audioIn()).toBe(1);
+    expect(ready).toHaveLength(1);
+    session.close();
+  });
+});
 
 describe('SonicSession failure behaviours', () => {
   it('FH-01: plays the fallback and closes cleanly when the stream will not open', async () => {
@@ -127,6 +162,29 @@ describe('SonicSession failure behaviours', () => {
       turn: 0,
     });
     expect(trace.turns[0]?.filler).toEqual({ played: true });
+    session.close();
+  });
+
+  it('FH-03: never fires in a pause mid-code, before Sonic detects the end of speech', async () => {
+    const sc = scriptedClient();
+    const phrases = fakePhrases();
+    const { listener, audio } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases,
+      fillerStallMs: 30,
+      toolTimeoutMs: 10_000,
+    });
+    await sc.opened;
+
+    sc.emit({ userSpeechStart: {} });
+    callerSegment('u1', 'what is the status of p o one').forEach(sc.emit);
+    await wait(80);
+    expect(audio).toEqual([]);
+
+    callerSegment('u2', 'oh four eight two').forEach(sc.emit);
+    sc.emit({ userSpeechEnd: {} });
+    await wait(80);
+    expect(audio).toEqual([{ pcm: phrases['FH-03'].pcm, turn: 0 }]);
     session.close();
   });
 
@@ -264,6 +322,122 @@ describe('SonicSession failure behaviours', () => {
       ok: boolean;
     };
     expect(content.ok).toBe(true); // the undelayed retry succeeded
+    session.close();
+  });
+});
+
+/** An agent text segment at `stage`, as Sonic streams it. */
+function agentSaid(contentId: string, stage: 'SPECULATIVE' | 'FINAL', content: string): Body[] {
+  const fields = `{"generationStage":"${stage}"}`;
+  return [
+    { contentStart: { contentId, role: 'ASSISTANT', type: 'TEXT', additionalModelFields: fields } },
+    { textOutput: { contentId, content } },
+  ];
+}
+
+const sentTexts = (input: Body[]) =>
+  input.flatMap((event) =>
+    'textInput' in event ? [String((event.textInput as Body).content)] : []
+  );
+
+describe('SonicSession interventions', () => {
+  const PO_ANSWER = 'Purchase order one zero four eight two from Summit Fasteners has shipped.';
+
+  it('B: mutes an answer that speaks PO data with no lookup and asks Sonic to look it up', async () => {
+    const sc = scriptedClient();
+    const { listener, audio } = fakeListener();
+    const flushed: (number | undefined)[] = [];
+    listener.onInterrupted = (turn) => flushed.push(turn);
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'status of p o one zero four eight two').forEach(sc.emit);
+    agentSaid('s1', 'SPECULATIVE', PO_ANSWER).forEach(sc.emit);
+    sc.emit({ audioOutput: { contentId: 'a1', content: Buffer.alloc(480).toString('base64') } });
+    agentSaid('f1', 'FINAL', PO_ANSWER).forEach(sc.emit);
+    await wait(20);
+
+    expect(audio).toEqual([]);
+    expect(flushed).toEqual([0]);
+    expect(sentTexts(sc.input).at(-1)).toBe(LOOK_UP_FIRST);
+    const [turn] = session.trace().turns;
+    expect(turn.interventions).toEqual(['blocked-answer']);
+    expect(turn.assistant.final_text).toBe('');
+    session.close();
+  });
+
+  it('B: ignores a late FINAL of an earlier answer that lands in the next turn', async () => {
+    const sc = scriptedClient();
+    const { listener } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'hello').forEach(sc.emit);
+    agentSaid('s1', 'SPECULATIVE', 'Hi.').forEach(sc.emit);
+    callerSaid('u2', 'wait').forEach(sc.emit);
+    agentSaid('f1', 'FINAL', PO_ANSWER).forEach(sc.emit);
+    await wait(20);
+
+    expect(sentTexts(sc.input)).not.toContain(LOOK_UP_FIRST);
+    session.close();
+  });
+
+  it('A: asks Sonic to speak a lookup result it ended its response without speaking', async () => {
+    const sc = scriptedClient();
+    const { listener } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+      nudgeAfterMs: 30,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'status of p o one zero four eight two').forEach(sc.emit);
+    sc.emit({
+      toolUse: { toolUseId: 't1', toolName: 'get_po_status', content: '{"po_code":"PO-10482"}' },
+    });
+    await wait(20);
+    agentSaid('f1', 'FINAL', 'Let me check that.').forEach(sc.emit);
+    sc.emit({ contentEnd: { contentId: 'f1', type: 'TEXT', stopReason: 'END_TURN' } });
+    await wait(80);
+
+    expect(sentTexts(sc.input).at(-1)).toBe(SPEAK_NOW);
+    expect(session.trace().turns[0].interventions).toEqual(['prompt-to-speak']);
+    session.close();
+  });
+});
+
+describe('SonicSession rotation', () => {
+  it('keeps agent text whose FINAL never came when a rotation retires its connection', async () => {
+    // A long rendering's last FINAL sometimes never arrives; it was recovered only from the
+    // connection's completionEnd, which a retired connection no longer delivers.
+    const sc = scriptedClient();
+    const { listener, transcripts } = fakeListener();
+    const rotation = {
+      thresholdMs: 20,
+      bufferMs: 0,
+      audioStartTimeoutMs: 10,
+      handoverTimeoutMs: 10,
+    };
+    const session = new SonicSession(sc.client, listener, rotation, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'hello').forEach(sc.emit);
+    agentSaid('s1', 'SPECULATIVE', 'Hello there.').forEach(sc.emit);
+    await wait(150);
+
+    expect(session.trace().events.map((event) => event.fh.id)).toContain('FH-05');
+    expect(session.trace().turns[0].assistant.final_text).toBe('Hello there.');
+    expect(transcripts).toContainEqual({ role: 'ASSISTANT', text: 'Hello there.' });
     session.close();
   });
 });

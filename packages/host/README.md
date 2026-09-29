@@ -53,16 +53,18 @@ The replay streams the clip in real time, plays the agent audio on a wall clock,
 
 Turn detection uses `endpointingSensitivity: LOW`: with `MEDIUM`, Sonic ended the caller's turn in the pause inside a slowly read code and called `get_po_status` with the digits missing (zero-filled) or the last one guessed. The host logs every tool call's input and every caller transcript with the session time, so a wrong code can be traced to what Sonic heard.
 
-Sonic still sometimes calls the tool mid-code, filling the missing digits with zeros or guesses (`sonic/reading.ts`). If the caller has said one to four digits in the current turn, the host holds the lookup until they have said five (at most 4 s), then answers `{"ok":false,"reason":"caller_still_reading"}` without running it, and the model calls again with the whole code. The turn's trace counts these as `early_tool_calls`.
+Sonic still sometimes calls the tool mid-code, filling the missing digits with zeros or guesses (`sonic/reading.ts`). If the caller has said one to four digits in the current turn, the host holds the lookup until they have said five (at most 4 s). If they finish the code, it answers `{"ok":false,"reason":"caller_still_reading"}` without running it, and the model calls again with the whole code; if no more digits come in time (the caller stopped, or Sonic mis-heard the code), the lookup runs as called, so a short code can never hold every retry. The turn's trace counts refused calls as `early_tool_calls`.
+
+When Sonic ends a response ("Let me check that.") with a lookup result it has not started speaking, and stays quiet for 3 s with the caller silent, the host sends Sonic a cross-modal USER text asking it to speak the rendering, once per result (`sonic/speak-nudge.ts`). When a turn with no lookup result starts speaking PO data (SPECULATIVE text matched by the grounded-po-data check's own detection, `traces/src/po-data.ts`), the host flushes the client, withholds that turn's audio and text until a result arrives, and tells Sonic to look the order up (`sonic/answer-guard.ts`). Withheld audio counts as neither delivered nor played, and withheld text is left out of `final_text` and the transcript. Both are traced as `interventions` on the turn; the `INTERRUPTED` that Sonic sends after host text is not a barge-in.
 
 ## Playback ledger and barge-in
 
 Each turn's trace records `audio.planned_ms`, `audio.delivered_ms` (audio Sonic generated) and `audio.played_ms` (audio the client reports it played). Over `/ws`:
 
-- Host to client: a `{"type":"turn","index":n}` frame before each turn's first audio, and `{"type":"flush","turn":n}` when Sonic signals `INTERRUPTED` (the interrupted turn may not have sent audio yet).
+- Host to client: `{"type":"ready"}` once Sonic has sent its first event (caller audio before it is dropped, so a slow stream open never hands Sonic a backlog), a `{"type":"turn","index":n}` frame before each turn's first audio, and `{"type":"flush","turn":n}` on a barge-in (the interrupted turn may not have sent audio yet).
 - Client to host: `{"type":"played","turn":n,"ms":m}` about every 50 ms while playing, and `{"type":"flushed","turn":n,"ms":m}` once it has dropped its queue.
 
-On a barge-in, `bargein.at_ms` is the heard position when Sonic signalled and `audio.flush_latency_ms` is the time until the client confirmed the flush. Planned equals generated unless the turn was interrupted; then it is at least the speculative text's length at 55 ms per character. Sonic generates faster than real time, so heard, not generated, is where a barge-in cuts the answer.
+A barge-in is Sonic's `INTERRUPTED`, or Sonic's `userSpeechStart` while more than 250 ms of its answer for the current turn is still unheard: Sonic times `INTERRUPTED` on its own playback clock, which can finish an answer before the caller has heard it, and then sends none. Each turn is cut off at most once, and a turn where only a filler has played never is. On a barge-in, `bargein.at_ms` is the heard position when Sonic signalled and `audio.flush_latency_ms` is the time until the client confirmed the flush. Planned equals generated unless the turn was interrupted; then it is at least the speculative text's length at 55 ms per character. Sonic generates faster than real time, so heard, not generated, is where a barge-in cuts the answer.
 
 ## Session rotation (FH-05)
 
@@ -77,8 +79,9 @@ Three phrases captured by S15 (`assets/phrases/`, voice Matthew, 24 kHz) cover t
   Bedrock failure, or the `fault=fh01` flag below), the host plays the captured fallback phrase
   directly on the socket as a whole turn, traces an `FH-01` event, and closes the session cleanly
   (`session.run()` resolves rather than rejects; no `1011` close).
-- **FH-03, a stall.** If no agent audio has started 1.5 s after the caller's last transcript
-  segment (`sonic/filler-timer.ts`), including while a tool lookup runs or an early call is held
+- **FH-03, a stall.** If no agent audio has started 1.5 s after Sonic detects the end of the
+  caller's speech (`userSpeechEnd`; `userSpeechStart` stops the clock, so a pause mid-code never
+  counts) (`sonic/filler-timer.ts`), including while a tool lookup runs or an early call is held
   (see "Tool calls" above), the host plays the "One moment." filler once for that turn and records
   `filler.played`. The filler is queued on the same turn as any later Sonic audio, which the client
   always plays back to back in the order received (`web/src/softphone/playback-queue.ts`), so it

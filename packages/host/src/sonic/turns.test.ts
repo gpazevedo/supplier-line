@@ -214,3 +214,111 @@ it('exposes the current caller text and counts tool calls made while the caller 
   });
   expect(r.turns()[0]).not.toHaveProperty('tool.early_calls');
 });
+
+/** One second of 24 kHz 16-bit agent audio, base64. */
+const SECOND = Buffer.alloc(48_000).toString('base64');
+
+it('treats caller speech while the answer is still playing as a barge-in, once', () => {
+  // Live barge-in failure: Sonic's playback clock had already finished the answer, so it sent no
+  // INTERRUPTED while the caller was still hearing it; only userSpeechStart arrived.
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of one zero four eight two?');
+  r.onEvent('audioOutput', { contentId: 'x1', content: SECOND }, 1000);
+  r.onEvent('audioOutput', { contentId: 'x1', content: SECOND }, 1100);
+  r.ledger.played(0, 1200);
+
+  expect(r.onEvent('userSpeechStart', {}, 2200)).toBe(true);
+  expect(r.onEvent('contentEnd', { stopReason: 'INTERRUPTED' }, 2201)).toBe(false);
+  expect(r.turns()[0].bargein).toEqual({ at_ms: 1200 });
+});
+
+it('reports a barge-in Sonic signalled with INTERRUPTED', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Hi');
+  r.onEvent('audioOutput', { contentId: 'x1', content: SECOND }, 1000);
+  expect(r.onEvent('contentEnd', { stopReason: 'INTERRUPTED' }, 1500)).toBe(true);
+});
+
+it('ignores caller speech once the answer has (nearly) finished playing', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Hi');
+  r.onEvent('audioOutput', { contentId: 'x1', content: SECOND }, 1000);
+  r.ledger.played(0, 900);
+  expect(r.onEvent('userSpeechStart', {}, 2000)).toBe(false);
+  expect(r.turns()[0].bargein).toBeUndefined();
+});
+
+it('ignores caller speech over a filler when Sonic has not spoken yet in the turn', () => {
+  // The caller finishing the code over a filler must not mark a barge-in, which would exempt
+  // that turn's answer from the exact-rendering check.
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of p o one');
+  r.onFiller(0, 48_000);
+  expect(r.onEvent('userSpeechStart', {}, 1600)).toBe(false);
+  expect(r.turns()[0].bargein).toBeUndefined();
+});
+
+it('leaves muted agent text out of what the turn spoke, and records the intervention', () => {
+  // Blocked answer (B): the caller never hears PO data spoken without a lookup.
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Status of one zero four eight two?');
+  textBlock(r, 's1', 'ASSISTANT', SPECULATIVE, 100)('Let me check that.');
+  textBlock(
+    r,
+    's2',
+    'ASSISTANT',
+    SPECULATIVE,
+    200
+  )('Purchase order one zero four eight two from Summit.');
+  r.mute(0);
+  r.onIntervention(0, 'blocked-answer');
+  textBlock(r, 'f1', 'ASSISTANT', FINAL, 900)('Let me check that.');
+  textBlock(
+    r,
+    'f2',
+    'ASSISTANT',
+    FINAL,
+    1900
+  )('Purchase order one zero four eight two from Summit.');
+  r.onToolResult('get_po_status', 'Purchase order one zero four eight two from Summit Fasteners.');
+  r.unmute();
+  textBlock(
+    r,
+    's3',
+    'ASSISTANT',
+    SPECULATIVE,
+    2500
+  )('Purchase order one zero four eight two from Summit Fasteners.');
+  textBlock(
+    r,
+    'f3',
+    'ASSISTANT',
+    FINAL,
+    3500
+  )('Purchase order one zero four eight two from Summit Fasteners.');
+
+  const [turn] = r.turns();
+  expect(turn.assistant.final_text).toBe(
+    'Let me check that. Purchase order one zero four eight two from Summit Fasteners.'
+  );
+  expect(turn.interventions).toEqual(['blocked-answer']);
+});
+
+it('does not count the interruption the host caused by sending text as a caller barge-in', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Hi');
+  r.onEvent('audioOutput', { contentId: 'x1', content: SECOND }, 1000);
+  r.expectHostInterruption();
+  expect(r.onEvent('contentEnd', { stopReason: 'INTERRUPTED' }, 1500)).toBe(false);
+  expect(r.turns()[0].bargein).toBeUndefined();
+  expect(r.onEvent('contentEnd', { stopReason: 'INTERRUPTED' }, 1600)).toBe(true);
+});
+
+it('counts a caller barge-in after host text once the caller speaks', () => {
+  const r = new TurnRecorder();
+  textBlock(r, 'u1', 'USER', FINAL, 0)('Hi');
+  r.onEvent('audioOutput', { contentId: 'x1', content: SECOND }, 1000);
+  r.expectHostInterruption();
+  r.onEvent('userSpeechStart', {}, 1100);
+  expect(r.turns()[0].bargein).toEqual({ at_ms: 0 });
+});

@@ -73,6 +73,9 @@ async function call(): Promise<void> {
     if (message.type === 'transcript') say(`${message.role}: ${message.text}`);
     if (message.type === 'trace') say(`Trace written: ${message.path}`);
     if (message.type === 'rejected') say(`Call rejected: ${message.reason}`);
+    // The host ignores the microphone until Sonic is listening.
+    if (message.type === 'ready')
+      status.textContent = 'On a call. Ask for the status of a purchase order.';
   };
   const mic = await startCapture(socket);
   socket.onclose = () => {
@@ -85,7 +88,7 @@ async function call(): Promise<void> {
   hangUp = () => {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'end' }));
   };
-  status.textContent = 'On a call. Ask for the status of a purchase order.';
+  if (status.textContent === 'Calling…') status.textContent = 'Connecting, please wait…';
   button.textContent = 'Hang up';
 }
 

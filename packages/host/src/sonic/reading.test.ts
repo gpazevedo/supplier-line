@@ -26,10 +26,12 @@ describe('callerStillReading', () => {
     expect(texts).toEqual(['dash one zero four eight two']);
   });
 
-  it('gives up waiting after the timeout, still holding the call', async () => {
+  it('lets the call run once the wait times out with the code still short', async () => {
+    // A mis-heard 4-digit code stayed in the unanswered turn; every retry was held and refused,
+    // and the caller heard nothing for minutes. A caller who says no more digits is not reading.
     const waits: number[] = [];
     const sleep = async (ms: number) => void waits.push(ms);
-    expect(await callerStillReading(() => 'dash one zero four', 400, sleep)).toBe(true);
+    expect(await callerStillReading(() => 'dash one zero four', 400, sleep)).toBe(false);
     expect(waits.reduce((a, b) => a + b, 0)).toBe(400);
   });
 

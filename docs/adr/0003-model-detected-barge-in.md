@@ -13,8 +13,12 @@ harder to get right within a one-shot build (V-08).
 
 ## Decision
 
-Supplier Line detects barge-in only from Sonic's own signal: when a `contentEnd` event reports
-`stopReason: 'INTERRUPTED'`, the host treats the current turn as interrupted. The browser runs no
+Supplier Line detects barge-in only from Sonic's own signals: when a `contentEnd` event reports
+`stopReason: 'INTERRUPTED'`, or when Sonic reports `userSpeechStart` while the caller has more than
+250 ms of the current turn's answer still to hear, the host treats the current turn as
+interrupted. The second signal is needed because Sonic times `INTERRUPTED` on its own playback
+clock, which can count an answer as finished before the caller has heard it (first live demo-up:
+no flush), and it is still Sonic's detection, not the browser's. The browser runs no
 local voice-activity detection and never preempts playback on its own; it only reacts to the
 host's `flush` message. Client-detected barge-in, and the echo handling it would require, are
 designed, not built.
@@ -32,8 +36,8 @@ designed, not built.
 
 ## Evidence
 
-- `packages/host/src/sonic/turns.ts:49` — `if (name === 'contentEnd' && body.stopReason ===
-'INTERRUPTED') this.onInterrupted(atMs);` — the only place a barge-in is recognised.
+- `packages/host/src/sonic/turns.ts`, `TurnRecorder.onEvent` — the only place a barge-in is
+  recognised.
 - `packages/host/README.md`, "Playback ledger and barge-in".
 - `CLAUDE.md` / `docs/build-plan.md`, Decisions table, "Barge-in | Model-detected only (V-03)...".
 - `CLAUDE.md` / `docs/build-plan.md`, "Out of scope: designed, not built" — "Client-detected barge-in

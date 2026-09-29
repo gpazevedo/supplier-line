@@ -1,12 +1,14 @@
 export interface FillerTimerHooks {
-  /** The stall has lasted `stallMs` with no agent audio yet for `turn`. */
+  /** The stall has lasted `stallMs` with no agent audio for `turn`. */
   onFire(turn: number): void;
+  /** The turn in progress, read when the timer fires. */
+  currentTurn(): number | undefined;
 }
 
 /**
- * Tracks the FH-03 stall per turn: `caller` (re)starts the clock whenever the caller finishes
- * speaking with no answer yet; `audio` cancels it once the agent's first audio for the turn
- * arrives. Fires at most once per turn.
+ * Tracks the FH-03 stall: the clock starts when Sonic detects the end of the caller's speech and
+ * stops when the caller speaks again or the agent's audio arrives, so a pause mid-code (inside one
+ * stretch of speech) never counts. Fires at most once per turn.
  */
 export class FillerTimer {
   private timer?: NodeJS.Timeout;
@@ -18,31 +20,39 @@ export class FillerTimer {
     private readonly hooks: FillerTimerHooks
   ) {}
 
-  /** The caller finished speaking (or spoke again) in `turn`, with no answer yet. */
-  caller(turn: number): void {
-    if (this.stopped) return;
-    clearTimeout(this.timer);
-    this.timer = undefined;
-    if (this.firedFor.has(turn)) return;
-    this.timer = setTimeout(() => this.fire(turn), this.stallMs);
+  /** Sonic detected the caller stopped speaking (`userSpeechEnd`). */
+  speechEnded(): void {
+    this.cancel();
+    if (!this.stopped) this.timer = setTimeout(() => this.fire(), this.stallMs);
   }
 
-  /** The agent's first audio for the turn in progress arrived. */
+  /** Sonic detected the caller speaking (`userSpeechStart`). */
+  speechStarted(): void {
+    this.cancel();
+  }
+
+  /** Agent audio arrived. */
   audio(): void {
-    clearTimeout(this.timer);
-    this.timer = undefined;
+    this.cancel();
   }
 
   /**
-   * Stops the timer for good, so no later `caller` call (from an event still draining out of the
-   * closing connection) can schedule a filler that would fire after the session has ended.
+   * Stops the timer for good, so no later call (from an event still draining out of the closing
+   * connection) can schedule a filler that would fire after the session has ended.
    */
   stop(): void {
     this.stopped = true;
-    this.audio();
+    this.cancel();
   }
 
-  private fire(turn: number): void {
+  private cancel(): void {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+  }
+
+  private fire(): void {
+    const turn = this.hooks.currentTurn();
+    if (turn === undefined || this.firedFor.has(turn)) return;
     this.firedFor.add(turn);
     this.hooks.onFire(turn);
   }

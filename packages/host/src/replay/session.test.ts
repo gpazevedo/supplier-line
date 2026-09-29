@@ -75,3 +75,22 @@ it('does not hang once rejected: the socket is already closed by the time runCli
   await wait(10);
   expect(wss?.clients.size).toBe(0);
 });
+
+it('sends no caller audio until the host says Sonic is ready', async () => {
+  let readyAt = 0;
+  let firstAudioAt = 0;
+  const url = await fakeHost((socket) => {
+    socket.on('message', (_data, isBinary) => {
+      if (isBinary) firstAudioAt ||= Date.now();
+    });
+    setTimeout(() => {
+      readyAt = Date.now();
+      socket.send(JSON.stringify({ type: 'ready' }));
+    }, 150);
+    setTimeout(() => socket.close(1000), 300);
+  });
+
+  await runClip({ url, sequence: [Buffer.alloc(3200)] }).catch(() => undefined);
+  expect(readyAt).toBeGreaterThan(0);
+  expect(firstAudioAt).toBeGreaterThanOrEqual(readyAt);
+});

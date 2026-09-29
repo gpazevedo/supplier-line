@@ -7,6 +7,7 @@ import type { Trace } from 'traces/src/index.js';
 import type { FixedPhrases } from '../phrases/fixed.js';
 import { SonicConnection } from './connection.js';
 import { FillerTimer } from './filler-timer.js';
+import { Interventions, NUDGE_AFTER_MS } from './interventions.js';
 import { Rotator, type RotationStats, type RotatorOptions } from './rotator.js';
 import { continuedPrompt, SYSTEM_PROMPT } from './prompt.js';
 import { callerStillReading } from './reading.js';
@@ -39,6 +40,8 @@ export interface SessionOptions {
   toolTimeoutMs?: number;
   /** Overridable for tests; production uses `FH03_STALL_MS`. */
   fillerStallMs?: number;
+  /** Overridable for tests; production uses `NUDGE_AFTER_MS`. */
+  nudgeAfterMs?: number;
 }
 
 /** Bedrock client for `us-east-1` over HTTP/2, which the bidirectional stream requires. */
@@ -62,6 +65,8 @@ export interface SessionListener {
   onInterrupted(turn: number | undefined): void;
   /** A FINAL transcript line, from the caller or the agent. */
   onTranscript(role: 'USER' | 'ASSISTANT', text: string): void;
+  /** Sonic is consuming the stream: the caller can speak now. Called once. */
+  onReady(): void;
 }
 
 type Body = Record<string, unknown>;
@@ -81,7 +86,10 @@ export class SonicSession {
   private readonly finished = Promise.withResolvers<undefined>();
   private readonly rotator: Rotator<SonicConnection>;
   private readonly filler: FillerTimer;
+  private readonly interventions: Interventions;
   private ending = false;
+  /** False until the first connection's first output event; caller audio is dropped until then. */
+  private ready = false;
   /** True once the very first connection's open failure has been handled (FH-01), so a second
    * report of the same failure (`opened` rejecting and `done` rejecting) is not handled twice. */
   private openFailed = false;
@@ -105,8 +113,15 @@ export class SonicSession {
   ) {
     this.faultToolDelayMs = options.fault?.toolDelayMs;
     this.faultHoldAudioMs = options.fault?.holdAudioMs;
+    this.interventions = new Interventions(options.nudgeAfterMs ?? NUDGE_AFTER_MS, {
+      recorder: this.recorder,
+      sendText: (text) => this.rotator.current.sendText(text),
+      flush: (turn) => this.listener.onInterrupted(turn),
+      log: (line) => this.log(line),
+    });
     this.filler = new FillerTimer(options.fillerStallMs ?? FH03_STALL_MS, {
       onFire: (turn) => this.onFillerFire(turn),
+      currentTurn: () => this.recorder.currentTurn,
     });
     const first = this.connect(SYSTEM_PROMPT);
     first.resume([]);
@@ -127,14 +142,20 @@ export class SonicSession {
     return this.finished.promise;
   }
 
+  /**
+   * Forwards caller audio once Sonic is ready. Audio from before then is dropped, not queued:
+   * Sonic reads a backlog faster than real time, which runs its playback clock ahead of what the
+   * caller hears and makes it miss barge-ins near the end of an answer.
+   */
   sendAudio(pcm: Buffer): void {
-    this.rotator.audio(pcm);
+    if (this.ready) this.rotator.audio(pcm);
   }
 
   /** Sends the closing sequence; `run` resolves once Sonic ends the stream. */
   close(): void {
     this.ending = true;
     this.filler.stop(); // so a pending or later-scheduled FH-03 timer can't fire after close
+    this.interventions.stop();
     if (this.audioHold) {
       clearTimeout(this.audioHold.timer); // so a pending audio-hold release can't fire after close
       this.audioHold = undefined;
@@ -171,6 +192,8 @@ export class SonicSession {
           if (from !== this.rotator.current) return;
           this.lastOrder = found ?? this.lastOrder;
           this.recorder.onToolResult(name, rendering);
+          const turn = this.recorder.currentTurn;
+          if (turn !== undefined) this.interventions.toolResult(turn, rendering);
           this.rotator.onToolResult(from, rendering);
         },
         callerStillReading: (from) => this.callerStillReading(from),
@@ -258,7 +281,15 @@ export class SonicSession {
     else this.finished.reject(new Error('Sonic ended the stream'));
   }
 
+  /** Keeps agent text whose FINAL never came; its connection has finished or been retired. */
+  private recoverUnconfirmedText(): void {
+    this.recorder
+      .onCompletionEnd()
+      .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
+  }
+
   private onRotated({ gapMs, audioInMs, audioForwardedMs }: RotationStats): void {
+    this.recoverUnconfirmedText();
     const turn = this.recorder.currentTurn;
     const event: TraceEvent = {
       fh: { id: 'FH-05' },
@@ -276,31 +307,40 @@ export class SonicSession {
       return;
     }
     if (process.env.DEBUG_EVENTS) this.log(`RAW ${name} ${JSON.stringify(body).slice(0, 300)}`);
+    if (!this.ready) this.onReady();
     if (name === 'audioOutput') {
       if (this.isHoldingAudio()) this.audioHold?.chunks.push(body);
       else this.processAudioOutput(body);
       return;
     }
-    this.recorder.onEvent(name, body, this.elapsedMs());
+    if (this.recorder.onEvent(name, body, this.elapsedMs())) {
+      this.log(`barge-in on turn ${this.recorder.currentTurn} (${name})`);
+      this.listener.onInterrupted(this.recorder.currentTurn);
+    }
     if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
+    if (name === 'userSpeechStart') this.filler.speechStarted();
+    if (name === 'userSpeechStart') this.interventions.callerSpoke();
+    if (name === 'contentEnd' && body.stopReason === 'END_TURN') this.interventions.responseEnded();
+    if (name === 'userSpeechEnd') this.filler.speechEnded();
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
-      this.listener.onInterrupted(this.recorder.currentTurn);
-    if (name === 'completionEnd') {
-      this.recorder
-        .onCompletionEnd()
-        .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
-    }
+    if (name === 'completionEnd') this.recoverUnconfirmedText();
     this.rotator.onOutput(from, name, body);
+  }
+
+  private onReady(): void {
+    this.ready = true;
+    this.log('ready');
+    this.listener.onReady();
   }
 
   /** Runs one `audioOutput` event through the normal pipeline (ledger, filler cancel, playback). */
   private processAudioOutput(body: Body): void {
+    this.rotator.onOutput(this.rotator.current, 'audioOutput', body);
+    if (this.interventions.mutes(this.recorder.currentTurn)) return;
     this.recorder.onEvent('audioOutput', body, this.elapsedMs());
     this.filler.audio();
     this.onAudio(String(body.content));
-    this.rotator.onOutput(this.rotator.current, 'audioOutput', body);
   }
 
   private isHoldingAudio(): boolean {
@@ -354,15 +394,15 @@ export class SonicSession {
     const id = String(body.contentId);
     const role = this.roles.get(id);
     const text = String(body.content);
+    const turn = this.recorder.currentTurn;
+    if (role === 'ASSISTANT' && turn !== undefined && !isInterruption(text))
+      this.interventions.assistantText(turn, text, this.finalIds.has(id));
     if (!this.finalIds.has(id) || isInterruption(text)) return;
+    if (role === 'ASSISTANT' && this.recorder.lastFinalMuted) return;
     if (role !== 'USER' && role !== 'ASSISTANT') return;
     if (role === 'USER') {
       this.log(`caller ${JSON.stringify(text)}`);
-      const turn = this.recorder.currentTurn;
-      if (turn !== undefined) {
-        this.filler.caller(turn);
-        this.armAudioHold(turn);
-      }
+      if (turn !== undefined) this.armAudioHold(turn);
     }
     this.listener.onTranscript(role, text);
   }

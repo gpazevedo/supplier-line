@@ -3,6 +3,7 @@ import { heardText, type HistoryMessage } from './history.js';
 import { PlaybackLedger } from './ledger.js';
 
 type TraceTurn = Trace['turns'][number];
+type Intervention = NonNullable<TraceTurn['interventions']>[number];
 
 interface Block {
   role: string;
@@ -19,12 +20,22 @@ interface OpenTurn {
   spoken: string[];
   fillerPlayed?: boolean;
   /** ASSISTANT segments spoken as SPECULATIVE text with no FINAL confirmation yet, in order. */
-  pendingSpeculative: string[];
+  pendingSpeculative: Segment[];
+  interventions: Intervention[];
+}
+
+/** A speculative segment; a muted one was never played, so its FINAL is not what was spoken. */
+interface Segment {
+  text: string;
+  muted: boolean;
 }
 
 type Body = Record<string, unknown>;
 
 export const isInterruption = (text: string) => /"interrupted"\s*:\s*true/.test(text);
+
+/** Caller speech counts as a barge-in only while more than this much agent audio is unheard. */
+const STILL_PLAYING_MS = 250;
 
 /**
  * Folds Sonic output events into trace turns. A turn starts with the caller's transcript;
@@ -35,19 +46,33 @@ export class TurnRecorder {
   readonly ledger = new PlaybackLedger();
   private blocks = new Map<string, Block>();
   private open: OpenTurn[] = [];
+  /** Turn whose agent text and audio the host is withholding from the caller. */
+  private mutedTurn?: number;
+  /** True when the last FINAL agent segment was muted, so the caller never heard it. */
+  lastFinalMuted = false;
+  /** The host sent Sonic text, which interrupts Sonic's response without the caller speaking. */
+  private hostInterruptionExpected = false;
 
   /** Index of the turn now in progress; undefined before the caller first speaks. */
   get currentTurn(): number | undefined {
     return this.current?.index;
   }
 
-  /** Feeds one output event, stamped with milliseconds since the session started. */
-  onEvent(name: string, body: Body, atMs: number): void {
+  /**
+   * Feeds one output event, stamped with milliseconds since the session started. Returns true
+   * when it cuts the current turn off: Sonic's INTERRUPTED, or Sonic detecting caller speech
+   * while the caller is still hearing its answer (its own clock may already count the answer as
+   * played, and then it sends no INTERRUPTED). Each turn is cut off at most once.
+   */
+  onEvent(name: string, body: Body, atMs: number): boolean {
     const id = String(body.contentId);
     if (name === 'contentStart') this.blocks.set(id, blockOf(body));
     if (name === 'audioOutput') this.onAudio(String(body.content), atMs);
-    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') this.onInterrupted(atMs);
     if (name === 'textOutput') this.onText(this.blocks.get(id), String(body.content), atMs);
+    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') return this.onInterrupted(atMs);
+    if (name === 'userSpeechStart') this.hostInterruptionExpected = false;
+    if (name === 'userSpeechStart' && this.stillPlaying()) return this.interrupt(atMs);
+    return false;
   }
 
   /** The caller's transcript so far in the current turn. */
@@ -80,6 +105,7 @@ export class TurnRecorder {
       spoken: [text],
       earlyToolCalls: 0,
       pendingSpeculative: [],
+      interventions: [],
     });
     this.ledger.generated(index, bytes);
     return index;
@@ -96,6 +122,26 @@ export class TurnRecorder {
     this.ledger.generated(turnIndex, bytes);
   }
 
+  /** Withholds `turn`'s agent text from now on, including the segment just received. */
+  mute(turn: number): void {
+    this.mutedTurn = turn;
+    const last = this.open[turn]?.pendingSpeculative.at(-1);
+    if (last) last.muted = true;
+  }
+
+  unmute(): void {
+    this.mutedTurn = undefined;
+  }
+
+  onIntervention(turn: number, kind: Intervention): void {
+    this.open[turn]?.interventions.push(kind);
+  }
+
+  /** The next INTERRUPTED comes from text the host sent, unless the caller speaks first. */
+  expectHostInterruption(): void {
+    this.hostInterruptionExpected = true;
+  }
+
   turns(): TraceTurn[] {
     return this.open.map((turn, index) => ({
       index,
@@ -106,6 +152,7 @@ export class TurnRecorder {
       ...(turn.tool && { tool: turn.tool }),
       ...(turn.earlyToolCalls > 0 && { early_tool_calls: turn.earlyToolCalls }),
       ...(turn.fillerPlayed && { filler: { played: true } }),
+      ...(turn.interventions.length > 0 && { interventions: turn.interventions }),
       assistant: { final_text: turn.spoken.join(' ') },
     }));
   }
@@ -142,14 +189,31 @@ export class TurnRecorder {
     this.ledger.generated(turn.index, Buffer.byteLength(base64, 'base64'));
   }
 
-  private onInterrupted(atMs: number): void {
-    if (this.currentTurn !== undefined) this.ledger.interrupted(this.currentTurn, atMs);
+  private onInterrupted(atMs: number): boolean {
+    if (!this.hostInterruptionExpected) return this.interrupt(atMs);
+    this.hostInterruptionExpected = false;
+    return false;
+  }
+
+  private interrupt(atMs: number): boolean {
+    const turn = this.currentTurn;
+    if (turn === undefined || this.ledger.isInterrupted(turn)) return false;
+    this.ledger.interrupted(turn, atMs);
+    return true;
+  }
+
+  /** Sonic has spoken in the current turn and the caller has not heard all of it yet. */
+  private stillPlaying(): boolean {
+    const turn = this.current;
+    if (turn?.firstAudioAt === undefined) return false;
+    return this.ledger.unplayedMs(turn.index) > STILL_PLAYING_MS;
   }
 
   private onText(block: Block | undefined, text: string, atMs: number): void {
+    const muted = this.mutedTurn !== undefined && this.mutedTurn === this.current?.index;
     if (block?.role === 'ASSISTANT' && !block.final && this.current) {
-      this.ledger.planned(this.current.index, text);
-      this.current.pendingSpeculative.push(text.trim());
+      if (!muted) this.ledger.planned(this.current.index, text);
+      this.current.pendingSpeculative.push({ text: text.trim(), muted });
     }
     if (!block?.final || isInterruption(text)) return;
     if (block.role === 'USER' && this.answered())
@@ -160,12 +224,14 @@ export class TurnRecorder {
         spoken: [],
         earlyToolCalls: 0,
         pendingSpeculative: [],
+        interventions: [],
       });
     else if (block.role === 'USER' && this.current) this.current.callerAt = atMs;
     if (block.role === 'USER') this.current?.caller.push(text.trim());
     if (block.role === 'ASSISTANT' && this.current) {
-      this.current.pendingSpeculative.shift(); // this FINAL settles the oldest still-open segment
-      this.current.spoken.push(text.trim());
+      const settled = this.current.pendingSpeculative.shift(); // the oldest still-open segment
+      this.lastFinalMuted = settled?.muted ?? muted;
+      if (!this.lastFinalMuted) this.current.spoken.push(text.trim());
     }
   }
 
@@ -180,9 +246,9 @@ export class TurnRecorder {
   onCompletionEnd(): string[] {
     const recovered: string[] = [];
     for (const turn of this.open) {
-      if (!turn.pendingSpeculative.length) continue;
-      recovered.push(...turn.pendingSpeculative);
-      turn.spoken.push(...turn.pendingSpeculative);
+      const unheard = turn.pendingSpeculative.filter((segment) => !segment.muted);
+      recovered.push(...unheard.map((segment) => segment.text));
+      turn.spoken.push(...unheard.map((segment) => segment.text));
       turn.pendingSpeculative = [];
     }
     return recovered;
