@@ -50,12 +50,17 @@ function scriptedClient() {
   };
 }
 
-/** A caller's FINAL transcript segment for a fresh content block. */
-function callerSaid(contentId: string, content: string): Body[] {
+/** A caller's FINAL transcript segment for a fresh content block, still mid-speech. */
+function callerSegment(contentId: string, content: string): Body[] {
   return [
     { contentStart: { contentId, role: 'USER', additionalModelFields: '{"stage":"FINAL"}' } },
     { textOutput: { contentId, content } },
   ];
+}
+
+/** A caller's whole utterance: its transcript, then Sonic detecting the end of speech. */
+function callerSaid(contentId: string, content: string): Body[] {
+  return [...callerSegment(contentId, content), { userSpeechEnd: {} }];
 }
 
 function fakePhrases(): FixedPhrases {
@@ -156,6 +161,29 @@ describe('SonicSession failure behaviours', () => {
       turn: 0,
     });
     expect(trace.turns[0]?.filler).toEqual({ played: true });
+    session.close();
+  });
+
+  it('FH-03: never fires in a pause mid-code, before Sonic detects the end of speech', async () => {
+    const sc = scriptedClient();
+    const phrases = fakePhrases();
+    const { listener, audio } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases,
+      fillerStallMs: 30,
+      toolTimeoutMs: 10_000,
+    });
+    await sc.opened;
+
+    sc.emit({ userSpeechStart: {} });
+    callerSegment('u1', 'what is the status of p o one').forEach(sc.emit);
+    await wait(80);
+    expect(audio).toEqual([]);
+
+    callerSegment('u2', 'oh four eight two').forEach(sc.emit);
+    sc.emit({ userSpeechEnd: {} });
+    await wait(80);
+    expect(audio).toEqual([{ pcm: phrases['FH-03'].pcm, turn: 0 }]);
     session.close();
   });
 

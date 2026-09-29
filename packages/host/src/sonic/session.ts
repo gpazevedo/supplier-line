@@ -111,6 +111,7 @@ export class SonicSession {
     this.faultHoldAudioMs = options.fault?.holdAudioMs;
     this.filler = new FillerTimer(options.fillerStallMs ?? FH03_STALL_MS, {
       onFire: (turn) => this.onFillerFire(turn),
+      currentTurn: () => this.recorder.currentTurn,
     });
     const first = this.connect(SYSTEM_PROMPT);
     first.resume([]);
@@ -296,6 +297,8 @@ export class SonicSession {
       this.listener.onInterrupted(this.recorder.currentTurn);
     }
     if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
+    if (name === 'userSpeechStart') this.filler.speechStarted();
+    if (name === 'userSpeechEnd') this.filler.speechEnded();
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
     if (name === 'completionEnd') {
@@ -376,10 +379,7 @@ export class SonicSession {
     if (role === 'USER') {
       this.log(`caller ${JSON.stringify(text)}`);
       const turn = this.recorder.currentTurn;
-      if (turn !== undefined) {
-        this.filler.caller(turn);
-        this.armAudioHold(turn);
-      }
+      if (turn !== undefined) this.armAudioHold(turn);
     }
     this.listener.onTranscript(role, text);
   }
