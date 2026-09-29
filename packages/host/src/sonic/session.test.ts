@@ -69,13 +69,42 @@ function fakePhrases(): FixedPhrases {
 function fakeListener() {
   const audio: { pcm: Buffer; turn: number | undefined }[] = [];
   const transcripts: { role: string; text: string }[] = [];
+  const ready: number[] = [];
   const listener: SessionListener = {
     onAudio: (pcm, turn) => audio.push({ pcm, turn }),
     onInterrupted: () => undefined,
     onTranscript: (role, text) => transcripts.push({ role, text }),
+    onReady: () => ready.push(Date.now()),
   };
-  return { listener, audio, transcripts };
+  return { listener, audio, transcripts, ready };
 }
+
+describe('SonicSession readiness', () => {
+  it('drops caller audio until Sonic sends its first event, then reports ready once', async () => {
+    // A late-opening stream used to get the caller's queued audio as a backlog; Sonic consumed it
+    // faster than real time, its playback clock ran ahead of the caller's, and a barge-in near the
+    // end of an answer was taken as a new turn with no INTERRUPTED (live barge-in failure).
+    const sc = scriptedClient();
+    const { listener, ready } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, { phrases: fakePhrases() });
+    await sc.opened;
+    const audioIn = () => sc.input.filter((event) => 'audioInput' in event).length;
+
+    session.sendAudio(Buffer.alloc(1024));
+    await wait(10);
+    expect(audioIn()).toBe(0);
+    expect(ready).toHaveLength(0);
+
+    sc.emit({ usageEvent: {} });
+    sc.emit({ usageEvent: {} });
+    await wait(10);
+    session.sendAudio(Buffer.alloc(1024));
+    await wait(10);
+    expect(audioIn()).toBe(1);
+    expect(ready).toHaveLength(1);
+    session.close();
+  });
+});
 
 describe('SonicSession failure behaviours', () => {
   it('FH-01: plays the fallback and closes cleanly when the stream will not open', async () => {

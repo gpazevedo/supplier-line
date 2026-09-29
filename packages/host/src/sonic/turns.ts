@@ -26,6 +26,9 @@ type Body = Record<string, unknown>;
 
 export const isInterruption = (text: string) => /"interrupted"\s*:\s*true/.test(text);
 
+/** Caller speech counts as a barge-in only while more than this much agent audio is unheard. */
+const STILL_PLAYING_MS = 250;
+
 /**
  * Folds Sonic output events into trace turns. A turn starts with the caller's transcript;
  * its latency runs from the caller's last transcript segment to the first agent audio chunk. The playback ledger
@@ -41,13 +44,20 @@ export class TurnRecorder {
     return this.current?.index;
   }
 
-  /** Feeds one output event, stamped with milliseconds since the session started. */
-  onEvent(name: string, body: Body, atMs: number): void {
+  /**
+   * Feeds one output event, stamped with milliseconds since the session started. Returns true
+   * when it cuts the current turn off: Sonic's INTERRUPTED, or Sonic detecting caller speech
+   * while the caller is still hearing its answer (its own clock may already count the answer as
+   * played, and then it sends no INTERRUPTED). Each turn is cut off at most once.
+   */
+  onEvent(name: string, body: Body, atMs: number): boolean {
     const id = String(body.contentId);
     if (name === 'contentStart') this.blocks.set(id, blockOf(body));
     if (name === 'audioOutput') this.onAudio(String(body.content), atMs);
-    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') this.onInterrupted(atMs);
     if (name === 'textOutput') this.onText(this.blocks.get(id), String(body.content), atMs);
+    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED') return this.interrupt(atMs);
+    if (name === 'userSpeechStart' && this.stillPlaying()) return this.interrupt(atMs);
+    return false;
   }
 
   /** The caller's transcript so far in the current turn. */
@@ -142,8 +152,18 @@ export class TurnRecorder {
     this.ledger.generated(turn.index, Buffer.byteLength(base64, 'base64'));
   }
 
-  private onInterrupted(atMs: number): void {
-    if (this.currentTurn !== undefined) this.ledger.interrupted(this.currentTurn, atMs);
+  private interrupt(atMs: number): boolean {
+    const turn = this.currentTurn;
+    if (turn === undefined || this.ledger.isInterrupted(turn)) return false;
+    this.ledger.interrupted(turn, atMs);
+    return true;
+  }
+
+  /** Sonic has spoken in the current turn and the caller has not heard all of it yet. */
+  private stillPlaying(): boolean {
+    const turn = this.current;
+    if (turn?.firstAudioAt === undefined) return false;
+    return this.ledger.unplayedMs(turn.index) > STILL_PLAYING_MS;
   }
 
   private onText(block: Block | undefined, text: string, atMs: number): void {

@@ -50,6 +50,16 @@ export class PlaybackLedger {
     this.at(turn).flushedAt = atMs;
   }
 
+  /** Milliseconds of the turn's audio delivered but not yet reported played. */
+  unplayedMs(turn: number): number {
+    const ledger = this.turns.get(turn);
+    return ledger ? Math.round(ledger.generatedBytes / BYTES_PER_MS) - ledger.playedMs : 0;
+  }
+
+  isInterrupted(turn: number): boolean {
+    return this.turns.get(turn)?.interruptedAt !== undefined;
+  }
+
   /** Milliseconds of the turn the caller heard, if a barge-in cut it; undefined otherwise. */
   heardMs(turn: number): number | undefined {
     const ledger = this.turns.get(turn);

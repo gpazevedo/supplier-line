@@ -62,6 +62,8 @@ export interface SessionListener {
   onInterrupted(turn: number | undefined): void;
   /** A FINAL transcript line, from the caller or the agent. */
   onTranscript(role: 'USER' | 'ASSISTANT', text: string): void;
+  /** Sonic is consuming the stream: the caller can speak now. Called once. */
+  onReady(): void;
 }
 
 type Body = Record<string, unknown>;
@@ -82,6 +84,8 @@ export class SonicSession {
   private readonly rotator: Rotator<SonicConnection>;
   private readonly filler: FillerTimer;
   private ending = false;
+  /** False until the first connection's first output event; caller audio is dropped until then. */
+  private ready = false;
   /** True once the very first connection's open failure has been handled (FH-01), so a second
    * report of the same failure (`opened` rejecting and `done` rejecting) is not handled twice. */
   private openFailed = false;
@@ -127,8 +131,13 @@ export class SonicSession {
     return this.finished.promise;
   }
 
+  /**
+   * Forwards caller audio once Sonic is ready. Audio from before then is dropped, not queued:
+   * Sonic reads a backlog faster than real time, which runs its playback clock ahead of what the
+   * caller hears and makes it miss barge-ins near the end of an answer.
+   */
   sendAudio(pcm: Buffer): void {
-    this.rotator.audio(pcm);
+    if (this.ready) this.rotator.audio(pcm);
   }
 
   /** Sends the closing sequence; `run` resolves once Sonic ends the stream. */
@@ -276,23 +285,31 @@ export class SonicSession {
       return;
     }
     if (process.env.DEBUG_EVENTS) this.log(`RAW ${name} ${JSON.stringify(body).slice(0, 300)}`);
+    if (!this.ready) this.onReady();
     if (name === 'audioOutput') {
       if (this.isHoldingAudio()) this.audioHold?.chunks.push(body);
       else this.processAudioOutput(body);
       return;
     }
-    this.recorder.onEvent(name, body, this.elapsedMs());
+    if (this.recorder.onEvent(name, body, this.elapsedMs())) {
+      this.log(`barge-in on turn ${this.recorder.currentTurn} (${name})`);
+      this.listener.onInterrupted(this.recorder.currentTurn);
+    }
     if (name === 'toolUse') this.log(`toolUse ${String(body.content)}`);
     if (name === 'contentStart') this.onContentStart(body);
     if (name === 'textOutput') this.onText(body);
-    if (name === 'contentEnd' && body.stopReason === 'INTERRUPTED')
-      this.listener.onInterrupted(this.recorder.currentTurn);
     if (name === 'completionEnd') {
       this.recorder
         .onCompletionEnd()
         .forEach((text) => this.listener.onTranscript('ASSISTANT', text));
     }
     this.rotator.onOutput(from, name, body);
+  }
+
+  private onReady(): void {
+    this.ready = true;
+    this.log('ready');
+    this.listener.onReady();
   }
 
   /** Runs one `audioOutput` event through the normal pipeline (ledger, filler cancel, playback). */

@@ -26,11 +26,18 @@ interface Chunk {
  * at which point this fake ends the matching response stream too, so `SonicSession.run()` settles
  * the same way it would against the real service.
  */
-function fakeClient(): { client: BedrockRuntimeClient; calls: () => number } {
+function fakeClient({ firstEvent }: { firstEvent?: object } = {}): {
+  client: BedrockRuntimeClient;
+  calls: () => number;
+} {
   let calls = 0;
   const send = async (command: { input: { body: AsyncIterable<Chunk> } }) => {
     calls++;
     const response = new AsyncQueue<Chunk>();
+    if (firstEvent)
+      response.push({
+        chunk: { bytes: new TextEncoder().encode(JSON.stringify({ event: firstEvent })) },
+      });
     void (async () => {
       for await (const _chunk of command.input.body) {
         // draining the outbound queue; the fake never echoes it back
@@ -130,6 +137,14 @@ it('accepts the right access code and opens a Sonic connection', async () => {
   attachSessions(server, { ...deps, client });
   const rec = new Recorder(`${base}?code=${ACCESS_CODE}`);
   await until(() => calls() > 0);
+  await rec.end();
+});
+
+it('tells the caller to speak once Sonic has sent its first event', async () => {
+  const { client } = fakeClient({ firstEvent: { usageEvent: {} } });
+  attachSessions(server, { ...deps, client });
+  const rec = new Recorder(`${base}?code=${ACCESS_CODE}`);
+  await until(() => rec.messages.some((m) => (m as { type: string }).type === 'ready'));
   await rec.end();
 });
 
