@@ -35,9 +35,9 @@ const POLL_MS = 100;
 
 /**
  * True when the model called the tool while the caller had said some but not all five digits of
- * a code in the current turn, so the lookup would use digits the caller has not said. It then
- * waits until the caller has said five digits (or `timeoutMs` passes) before answering, so the
- * model hears the whole code before it is told to call again.
+ * a code in the current turn, and the caller then finished the code within `timeoutMs`: the
+ * model is told to call again with the whole code. If no more digits come in time, the caller is
+ * not reading any more (or the code was mis-heard), and the call runs as made.
  */
 export async function callerStillReading(
   callerText: () => string,
@@ -48,5 +48,5 @@ export async function callerStillReading(
   for (let waited = 0; waited < timeoutMs && midCode(callerText()); waited += POLL_MS) {
     await sleep(Math.min(POLL_MS, timeoutMs - waited));
   }
-  return true;
+  return !midCode(callerText());
 }
