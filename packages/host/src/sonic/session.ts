@@ -395,15 +395,22 @@ export class SonicSession {
     const role = this.roles.get(id);
     const text = String(body.content);
     const turn = this.recorder.currentTurn;
-    if (role === 'ASSISTANT' && turn !== undefined && !isInterruption(text))
-      this.interventions.assistantText(turn, text, this.finalIds.has(id));
-    if (!this.finalIds.has(id) || isInterruption(text)) return;
-    if (role === 'ASSISTANT' && this.recorder.lastFinalMuted) return;
-    if (role !== 'USER' && role !== 'ASSISTANT') return;
-    if (role === 'USER') {
-      this.log(`caller ${JSON.stringify(text)}`);
-      if (turn !== undefined) this.armAudioHold(turn);
-    }
+    const final = this.finalIds.has(id);
+    if (isInterruption(text)) return;
+    if (role === 'ASSISTANT' && !final && turn !== undefined)
+      this.interventions.assistantText(turn, text, false);
+    if (role === 'ASSISTANT' && final)
+      this.recorder.takeConfirmed().forEach((t) => this.onHeard(t));
+    if (role !== 'USER' || !final) return;
+    this.log(`caller ${JSON.stringify(text)}`);
+    if (turn !== undefined) this.armAudioHold(turn);
     this.listener.onTranscript(role, text);
+  }
+
+  /** Agent text the recorder confirmed the caller heard: never text muted as ungrounded. */
+  private onHeard(text: string): void {
+    const turn = this.recorder.currentTurn;
+    if (turn !== undefined) this.interventions.assistantText(turn, text, true);
+    this.listener.onTranscript('ASSISTANT', text);
   }
 }

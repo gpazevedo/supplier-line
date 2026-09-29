@@ -42,8 +42,10 @@ export class Interventions {
   }
 
   /**
-   * Agent text. Only SPECULATIVE text can block: it is new generation, while a FINAL follows
-   * playback and can land after the caller has already started the next turn.
+   * Agent text: SPECULATIVE as generated, FINAL only once heard (never muted text), so a late
+   * FINAL of a blocked answer cannot pass for the result being spoken. Only SPECULATIVE text can
+   * block: it is new generation, while a FINAL follows playback and can land after the caller has
+   * already started the next turn.
    */
   assistantText(turn: number, text: string, final: boolean): void {
     this.nudge.assistantText(text);

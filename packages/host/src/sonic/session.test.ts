@@ -342,6 +342,7 @@ const sentTexts = (input: Body[]) =>
 
 describe('SonicSession interventions', () => {
   const PO_ANSWER = 'Purchase order one zero four eight two from Summit Fasteners has shipped.';
+  const RENDERING_10482 = `${PO_ANSWER} The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six.`;
 
   it('B: mutes an answer that speaks PO data with no lookup and asks Sonic to look it up', async () => {
     const sc = scriptedClient();
@@ -366,6 +367,76 @@ describe('SonicSession interventions', () => {
     const [turn] = session.trace().turns;
     expect(turn.interventions).toEqual(['blocked-answer']);
     expect(turn.assistant.final_text).toBe('');
+    session.close();
+  });
+
+  it('B: the caller hears, and the trace records, only the grounded answer (live turn 14)', async () => {
+    // Sonic answered from memory, was blocked, looked the order up and spoke the rendering; the
+    // blocked sentence's FINAL never came. final_text and the transcript lost sentence one and
+    // repeated sentence three, while the audio was right.
+    const sc = scriptedClient();
+    const { listener, audio, transcripts } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+    });
+    const [one, two, three] = RENDERING_10482.split(/(?<=\.) /);
+    const say = (id: string, text: string) => {
+      agentSaid(`s${id}`, 'SPECULATIVE', text).forEach(sc.emit);
+      sc.emit({
+        audioOutput: { contentId: `a${id}`, content: Buffer.alloc(48).toString('base64') },
+      });
+    };
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'status of p o one zero four eight two').forEach(sc.emit);
+    say('0', one);
+    agentSaid('x0', 'FINAL', '{ "interrupted" : true }').forEach(sc.emit);
+    sc.emit({ contentEnd: { contentId: 'x0', type: 'TEXT', stopReason: 'INTERRUPTED' } });
+    sc.emit({
+      toolUse: { toolUseId: 't1', toolName: 'get_po_status', content: '{"po_code":"PO-10482"}' },
+    });
+    await wait(20);
+    [one, two, three].forEach((text, i) => say(`${i + 1}`, text));
+    [one, two, three].forEach((text, i) => agentSaid(`f${i + 1}`, 'FINAL', text).forEach(sc.emit));
+    sc.emit({ completionEnd: {} });
+    await wait(20);
+
+    const [turn] = session.trace().turns;
+    expect(turn.assistant.final_text).toBe(RENDERING_10482);
+    expect(transcripts.filter((t) => t.role === 'ASSISTANT').map((t) => t.text)).toEqual([
+      one,
+      two,
+      three,
+    ]);
+    expect(audio).toHaveLength(3);
+    expect(turn.audio?.delivered_ms).toBe(3);
+    session.close();
+  });
+
+  it('A: a late FINAL of the blocked answer does not count as speaking the result', async () => {
+    const sc = scriptedClient();
+    const { listener } = fakeListener();
+    const session = new SonicSession(sc.client, listener, ROTATION, {
+      phrases: fakePhrases(),
+      fillerStallMs: 10_000,
+      nudgeAfterMs: 30,
+    });
+    await sc.opened;
+    sc.emit({ usageEvent: {} });
+    callerSaid('u1', 'status of p o one zero four eight two').forEach(sc.emit);
+    agentSaid('s0', 'SPECULATIVE', PO_ANSWER).forEach(sc.emit);
+    sc.emit({
+      toolUse: { toolUseId: 't1', toolName: 'get_po_status', content: '{"po_code":"PO-10482"}' },
+    });
+    await wait(20);
+    agentSaid('f0', 'FINAL', PO_ANSWER).forEach(sc.emit);
+    sc.emit({ contentEnd: { contentId: 'f0', type: 'TEXT', stopReason: 'END_TURN' } });
+    await wait(80);
+
+    expect(sentTexts(sc.input).at(-1)).toBe(SPEAK_NOW);
+    expect(session.trace().turns[0].interventions).toEqual(['blocked-answer', 'prompt-to-speak']);
+    expect(session.trace().turns[0].assistant.final_text).toBe('');
     session.close();
   });
 

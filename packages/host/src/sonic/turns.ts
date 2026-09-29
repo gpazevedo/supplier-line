@@ -48,8 +48,8 @@ export class TurnRecorder {
   private open: OpenTurn[] = [];
   /** Turn whose agent text and audio the host is withholding from the caller. */
   private mutedTurn?: number;
-  /** True when the last FINAL agent segment was muted, so the caller never heard it. */
-  lastFinalMuted = false;
+  /** Agent text confirmed as heard (FINAL, or a spoken segment whose FINAL never came), unread. */
+  private confirmed: string[] = [];
   /** The host sent Sonic text, which interrupts Sonic's response without the caller speaking. */
   private hostInterruptionExpected = false;
 
@@ -120,6 +120,11 @@ export class TurnRecorder {
     if (!turn) return;
     turn.fillerPlayed = true;
     this.ledger.generated(turnIndex, bytes);
+  }
+
+  /** Agent text confirmed as heard since the last call, in order. */
+  takeConfirmed(): string[] {
+    return this.confirmed.splice(0);
   }
 
   /** Withholds `turn`'s agent text from now on, including the segment just received. */
@@ -229,9 +234,9 @@ export class TurnRecorder {
     else if (block.role === 'USER' && this.current) this.current.callerAt = atMs;
     if (block.role === 'USER') this.current?.caller.push(text.trim());
     if (block.role === 'ASSISTANT' && this.current) {
-      const settled = this.current.pendingSpeculative.shift(); // the oldest still-open segment
-      this.lastFinalMuted = settled?.muted ?? muted;
-      if (!this.lastFinalMuted) this.current.spoken.push(text.trim());
+      const heard = settle(this.current.pendingSpeculative, text.trim(), muted);
+      this.current.spoken.push(...heard);
+      this.confirmed.push(...heard);
     }
   }
 
@@ -259,6 +264,19 @@ export class TurnRecorder {
     const turn = this.current;
     return !turn || turn.spoken.length > 0 || turn.firstAudioAt !== undefined;
   }
+}
+
+/**
+ * Settles the pending segment a FINAL confirms: the one with the same text, else the oldest.
+ * Segments before it never got their FINAL (a blocked answer Sonic was interrupted in, or a Sonic
+ * gap): muted ones are dropped, the rest were spoken. Returns the heard text, in order.
+ */
+function settle(pending: Segment[], final: string, muted: boolean): string[] {
+  const match = pending.findIndex((segment) => segment.text === final);
+  const skipped = match > 0 ? pending.splice(0, match) : [];
+  const settled = pending.shift();
+  const heard = skipped.filter((segment) => !segment.muted).map((segment) => segment.text);
+  return (settled?.muted ?? muted) ? heard : [...heard, final];
 }
 
 function blockOf(body: Body): Block {

@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { TurnRecorder } from './turns.js';
 
 const FINAL = '{"generationStage":"FINAL"}';
@@ -302,6 +302,40 @@ it('leaves muted agent text out of what the turn spoke, and records the interven
     'Let me check that. Purchase order one zero four eight two from Summit Fasteners.'
   );
   expect(turn.interventions).toEqual(['blocked-answer']);
+});
+
+describe('a blocked answer, then the grounded answer (live long-repeat turn 14)', () => {
+  // Pairing FINALs with speculative segments in arrival order let one missing FINAL shift every
+  // later one: final_text read "sentence two, three, three" while the caller heard one, two, three.
+  const [ONE, TWO, THREE] = ['Purchase order one zero.', 'The amount is five.', 'Due soon.'];
+
+  function blockedThenGrounded(missingFinal: 'blocked' | 'first-grounded') {
+    const r = new TurnRecorder();
+    textBlock(r, 'u1', 'USER', FINAL, 0)('Status of one zero four eight two?');
+    textBlock(r, 's0', 'ASSISTANT', SPECULATIVE, 100)(ONE);
+    r.mute(0);
+    textBlock(r, 'x0', 'ASSISTANT', FINAL, 150)('{ "interrupted" : true }');
+    if (missingFinal !== 'blocked') textBlock(r, 'f0', 'ASSISTANT', FINAL, 160)(ONE);
+    r.onToolResult('get_po_status', `${ONE} ${TWO} ${THREE}`);
+    r.unmute();
+    [ONE, TWO, THREE].forEach((text, i) =>
+      textBlock(r, `s${i + 1}`, 'ASSISTANT', SPECULATIVE, 200 + i)(text)
+    );
+    if (missingFinal !== 'first-grounded') textBlock(r, 'f1', 'ASSISTANT', FINAL, 300)(ONE);
+    textBlock(r, 'f2', 'ASSISTANT', FINAL, 400)(TWO);
+    textBlock(r, 'f3', 'ASSISTANT', FINAL, 500)(THREE);
+    return { r, confirmed: r.takeConfirmed(), recovered: r.onCompletionEnd() };
+  }
+
+  it.each(['blocked', 'first-grounded'] as const)(
+    'keeps only the grounded answer, in order, when the %s FINAL never comes',
+    (missing) => {
+      const { r, confirmed, recovered } = blockedThenGrounded(missing);
+      expect(r.turns()[0].assistant.final_text).toBe(`${ONE} ${TWO} ${THREE}`);
+      expect(confirmed).toEqual([ONE, TWO, THREE]);
+      expect(recovered).toEqual([]);
+    }
+  );
 });
 
 it('does not count the interruption the host caused by sending text as a caller barge-in', () => {
