@@ -1,0 +1,391 @@
+{
+  "session_id": "6bb424d7-0447-49a3-9d80-5ee53ecdd01f",
+  "front_door": "softphone",
+  "started_at": "2026-09-29T23:07:22.228Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 1125
+      },
+      "audio": {
+        "planned_ms": 13960,
+        "delivered_ms": 13960,
+        "played_ms": 13960
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 1,
+      "latency": {
+        "voice_to_voice_ms": 1407
+      },
+      "audio": {
+        "planned_ms": 13480,
+        "delivered_ms": 13480,
+        "played_ms": 13480
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 2,
+      "latency": {
+        "voice_to_voice_ms": 1583
+      },
+      "audio": {
+        "planned_ms": 14680,
+        "delivered_ms": 14680,
+        "played_ms": 14680
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 3,
+      "latency": {
+        "voice_to_voice_ms": 1262
+      },
+      "audio": {
+        "planned_ms": 13280,
+        "delivered_ms": 13280,
+        "played_ms": 13280
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 4,
+      "latency": {
+        "voice_to_voice_ms": 1510
+      },
+      "audio": {
+        "planned_ms": 14200,
+        "delivered_ms": 14200,
+        "played_ms": 14200
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 5,
+      "latency": {
+        "voice_to_voice_ms": 1591
+      },
+      "audio": {
+        "planned_ms": 14600,
+        "delivered_ms": 14600,
+        "played_ms": 14600
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 6,
+      "latency": {
+        "voice_to_voice_ms": 1513
+      },
+      "audio": {
+        "planned_ms": 14160,
+        "delivered_ms": 14160,
+        "played_ms": 14160
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 7,
+      "latency": {
+        "voice_to_voice_ms": 1457
+      },
+      "audio": {
+        "planned_ms": 13560,
+        "delivered_ms": 13560,
+        "played_ms": 13560
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 8,
+      "latency": {
+        "voice_to_voice_ms": 1716
+      },
+      "audio": {
+        "planned_ms": 14400,
+        "delivered_ms": 14400,
+        "played_ms": 14400
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 9,
+      "latency": {
+        "voice_to_voice_ms": 1693
+      },
+      "audio": {
+        "planned_ms": 14240,
+        "delivered_ms": 14240,
+        "played_ms": 14240
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 10,
+      "latency": {
+        "voice_to_voice_ms": 1750
+      },
+      "audio": {
+        "planned_ms": 14400,
+        "delivered_ms": 14400,
+        "played_ms": 14400
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 11,
+      "latency": {
+        "voice_to_voice_ms": 1870
+      },
+      "audio": {
+        "planned_ms": 14200,
+        "delivered_ms": 14200,
+        "played_ms": 14200
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 12,
+      "latency": {
+        "voice_to_voice_ms": 9777
+      },
+      "audio": {
+        "planned_ms": 8000,
+        "delivered_ms": 8000,
+        "played_ms": 8000
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Sorry, purchase order one three three four five doesn't look like a valid purchase order code. Could you say it again, one digit at a time?"
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Sorry, purchase order one three three four five doesn't look like a valid purchase order code. Could you say it again, one digit at a time?"
+      }
+    },
+    {
+      "index": 13,
+      "latency": {
+        "voice_to_voice_ms": 1738
+      },
+      "audio": {
+        "planned_ms": 16360,
+        "delivered_ms": 16360,
+        "played_ms": 16360
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "filler": {
+        "played": true
+      },
+      "assistant": {
+        "final_text": "Let me check that. Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 14,
+      "latency": {
+        "voice_to_voice_ms": 1276
+      },
+      "audio": {
+        "planned_ms": 13920,
+        "delivered_ms": 13920,
+        "played_ms": 13920
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    }
+  ],
+  "events": [
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 67049,
+      "turn": 2
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 127571,
+      "turn": 4
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 155964,
+      "turn": 5
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 188264,
+      "turn": 6
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 247842,
+      "turn": 8
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 276832,
+      "turn": 9
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 307898,
+      "turn": 10
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 336924,
+      "turn": 11
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 368855,
+      "turn": 12
+    },
+    {
+      "fh": {
+        "id": "FH-05"
+      },
+      "at_ms": 380804,
+      "turn": 12,
+      "rotation": {
+        "audio_in_ms": 7392,
+        "audio_forwarded_ms": 7392,
+        "gap_ms": 1
+      }
+    },
+    {
+      "fh": {
+        "id": "FH-03"
+      },
+      "at_ms": 394035,
+      "turn": 13
+    }
+  ]
+}

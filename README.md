@@ -65,11 +65,7 @@ Worst case, if a window is approved and forgotten: about 8 hours running, roughl
 | Final review (S19): `docs/review-s19.md`                                      | Built |
 | README and ADRs (S20)                                                         | Built |
 
-**Verified at H3** (pending, not yet run): the app stack has never been deployed. `demo-up`, the
-image running on Fargate, the deployed IAM policies, and the live smoke job (which checks its own
-traces, including a 7-minute rotation) are all first exercised at that checkpoint. Everything above
-is checked with mocks, `cdk synth`/`cdk-nag`, or a container run under CI — never against a live
-AWS deployment. See "What the owner must do" in `docs/review-s19.md`.
+**Verified at H3** ([demo-up run 36642547863](https://github.com/gpazevedo/supplier-line/actions/runs/36642547863), 2026-09-29): the app stack deployed on Fargate, and the live smoke job replayed all six caller-clip scenarios against it, including a rotation at 381 s with no caller audio lost. All six traces passed the six trace checks. They are committed as `fixtures/traces/h3-live-*.json`, so CI checks real deployed behaviour from now on. Earlier `demo-up` runs failed and were fixed first; see `docs/review-s19.md` and ADR-0006.
 
 Known issues:
 
@@ -148,8 +144,8 @@ One-time setup: [INSTALL.md](INSTALL.md) and [docs/h0-part2.md](docs/h0-part2.md
 
 ## Cost notes
 
-Approximate, `us-east-1`, from `docs/build-plan.md`'s cost table — not yet measured against a live
-deploy (verified at H3):
+Approximate, `us-east-1`, from `docs/build-plan.md`'s cost table — estimates, not measured; H3
+verified behaviour, not cost:
 
 | Item                                                       | When charged                 | Cost                                 |
 | ---------------------------------------------------------- | ---------------------------- | ------------------------------------ |

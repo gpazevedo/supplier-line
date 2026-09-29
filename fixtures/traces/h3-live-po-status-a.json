@@ -1,0 +1,28 @@
+{
+  "session_id": "2b44668a-e56d-43d6-8f56-1dd1b8c49954",
+  "front_door": "softphone",
+  "started_at": "2026-09-29T23:03:17.616Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 939
+      },
+      "audio": {
+        "planned_ms": 15920,
+        "delivered_ms": 15920,
+        "played_ms": 15920
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "early_tool_calls": 1,
+      "interventions": ["prompt-to-speak"],
+      "assistant": {
+        "final_text": "Let me check that. Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    }
+  ],
+  "events": []
+}

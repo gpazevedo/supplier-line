@@ -1,0 +1,45 @@
+{
+  "session_id": "4b27b1ec-70ee-4f80-83e7-ef4d97121ba2",
+  "front_door": "softphone",
+  "started_at": "2026-09-29T23:04:22.802Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 1060
+      },
+      "audio": {
+        "planned_ms": 9350,
+        "delivered_ms": 6360,
+        "played_ms": 2450,
+        "flush_latency_ms": 57
+      },
+      "bargein": {
+        "at_ms": 2369
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "early_tool_calls": 1,
+      "assistant": {
+        "final_text": "Let me check that. Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents."
+      }
+    },
+    {
+      "index": 1,
+      "latency": {
+        "voice_to_voice_ms": 638
+      },
+      "audio": {
+        "planned_ms": 760,
+        "delivered_ms": 760,
+        "played_ms": 760
+      },
+      "assistant": {
+        "final_text": "Sure."
+      }
+    }
+  ],
+  "events": []
+}

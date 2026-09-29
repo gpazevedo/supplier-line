@@ -1,0 +1,46 @@
+{
+  "session_id": "98644290-4fd0-484d-aa2b-eef3b6dfc4ee",
+  "front_door": "softphone",
+  "started_at": "2026-09-29T23:04:45.920Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 928
+      },
+      "audio": {
+        "planned_ms": 14640,
+        "delivered_ms": 14640,
+        "played_ms": 14640
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "early_tool_calls": 1,
+      "interventions": ["prompt-to-speak"],
+      "assistant": {
+        "final_text": "Let me check that. Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    },
+    {
+      "index": 1,
+      "latency": {
+        "voice_to_voice_ms": 1222
+      },
+      "audio": {
+        "planned_ms": 13480,
+        "delivered_ms": 13480,
+        "played_ms": 13480
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order one zero four eight two from Summit Fasteners has shipped. The amount is forty-five thousand two hundred sixteen euros and eighteen cents. It was ordered on October fourth, twenty twenty-six, and delivery is due on October twenty-fourth, twenty twenty-six."
+      }
+    }
+  ],
+  "events": []
+}

@@ -1,0 +1,26 @@
+{
+  "session_id": "0c9a935e-61ce-466a-909b-72c4b13d8baa",
+  "front_door": "softphone",
+  "started_at": "2026-09-29T23:03:54.882Z",
+  "turns": [
+    {
+      "index": 0,
+      "latency": {
+        "voice_to_voice_ms": 1431
+      },
+      "audio": {
+        "planned_ms": 16160,
+        "delivered_ms": 16160,
+        "played_ms": 16160
+      },
+      "tool": {
+        "name": "get_po_status",
+        "rendering": "Purchase order two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six. Delivery was due on September thirtieth, twenty twenty-six and is now expected on October fourth, twenty twenty-six."
+      },
+      "assistant": {
+        "final_text": "Purchase order two zero nine three one from Summit Fasteners is delayed. The amount is twenty-six thousand three hundred fifty-three dollars and seventy-eight cents. It was ordered on September fifteenth, twenty twenty-six. Delivery was due on September thirtieth, twenty twenty-six and is now expected on October fourth, twenty twenty-six."
+      }
+    }
+  ],
+  "events": []
+}

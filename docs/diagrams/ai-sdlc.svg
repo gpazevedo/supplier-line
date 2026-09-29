@@ -174,7 +174,7 @@
     <text class="s" x="744" y="680" text-anchor="middle">S19</text>
     <text class="m s" x="744" y="710" text-anchor="middle">final review</text>
 
-    <path class="hu todo" d="M822 646 L844 668 L822 690 L800 668 z"/>
+    <path class="hu" d="M822 646 L844 668 L822 690 L800 668 z"/>
     <text class="s" x="822" y="672" text-anchor="middle" font-weight="700">H3</text>
     <text class="m s" x="822" y="710" text-anchor="middle">demo-up 1 h</text>
 
