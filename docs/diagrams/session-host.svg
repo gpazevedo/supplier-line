@@ -57,8 +57,8 @@
   <path class="arrow" d="M446 186 H270"/>
   <text class="m" x="358" y="126" text-anchor="middle">up: caller PCM,</text>
   <text class="m" x="358" y="140" text-anchor="middle">played ms, flushed</text>
-  <text class="m" x="358" y="206" text-anchor="middle">down: agent audio, turn</text>
-  <text class="m" x="358" y="220" text-anchor="middle">marker, flush, transcript</text>
+  <text class="m" x="358" y="206" text-anchor="middle">down: ready, agent audio,</text>
+  <text class="m" x="358" y="220" text-anchor="middle">turn, flush, transcript</text>
   <text class="code" x="358" y="246" text-anchor="middle">WebSocket /ws</text>
 
   <!-- Host -->
@@ -72,8 +72,8 @@
 
   <rect class="ai" x="470" y="220" width="420" height="80" rx="8"/>
   <text class="t" x="486" y="244">Sonic session: the whole call</text>
-  <text x="486" y="264">heard: current connection; early-lookup hold; FH-01/03/10</text>
-  <text class="code" x="486" y="286">session.ts  filler-timer.ts  tool-timeout.ts</text>
+  <text x="486" y="264">reading hold, answer guard, speak nudge, FH-01/03/10</text>
+  <text class="code" x="486" y="286">session.ts  reading.ts  answer-guard.ts  speak-nudge.ts</text>
 
   <rect class="ai" x="470" y="320" width="200" height="140" rx="8"/>
   <text class="t" x="486" y="344">Rotator (FH-05)</text>

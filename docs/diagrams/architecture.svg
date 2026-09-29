@@ -75,7 +75,7 @@
   <text x="604" y="340">/ws  /api  /health</text>
   <text x="604" y="360">rotation, fillers, S3 traces</text>
 
-  <!-- Bedrock and notebook note -->
+  <!-- Bedrock and H3 note -->
   <rect class="ai" x="880" y="140" width="280" height="90" rx="8"/>
   <text class="t" x="896" y="164">Amazon Bedrock</text>
   <text x="896" y="184">Nova 2 Sonic, voice Matthew</text>
@@ -83,11 +83,11 @@
   <text x="896" y="220">bidirectional stream, en-US</text>
 
   <rect class="note" x="880" y="260" width="280" height="120" rx="8"/>
-  <text class="t" x="896" y="284">Before H3</text>
-  <text x="896" y="306">The host and softphone run on the</text>
-  <text x="896" y="324">notebook against real Bedrock and</text>
-  <text x="896" y="342">Connect; no ALB or Fargate. The</text>
-  <text x="896" y="360">app stack exists only for demo-up.</text>
+  <text class="t" x="896" y="284">Verified at H3</text>
+  <text x="896" y="306">demo-up deployed this stack on</text>
+  <text x="896" y="324">29 Sep; its smoke test passed all</text>
+  <text x="896" y="342">6 caller scenarios, rotation too.</text>
+  <text x="896" y="360">Local runs use the notebook.</text>
 
   <!-- Persistent stack -->
   <rect class="frame" x="300" y="470" width="860" height="290" rx="12"/>

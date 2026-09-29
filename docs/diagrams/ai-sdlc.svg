@@ -132,7 +132,7 @@
 
   <!-- Phases and checkpoints -->
   <text class="h2" x="40" y="620">Phases and human checkpoints</text>
-  <text class="m" x="1160" y="620" text-anchor="end">status on 28 Sep 2026</text>
+  <text class="m" x="1160" y="620" text-anchor="end">status on 29 Sep 2026</text>
   <path class="arrow" d="M60 668 H1018"/>
 
   <g>
