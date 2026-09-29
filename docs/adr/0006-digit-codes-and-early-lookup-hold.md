@@ -16,7 +16,9 @@ PO codes are rendered digit by digit with no dash or letter grouping beyond "PO"
 speaks as "one zero four eight two". Separately, if the model calls `get_po_status` while the
 caller has said one to four digits of a code in the current turn, the host holds the lookup —
 answering `{"ok":false,"reason":"caller_still_reading"}` without running it — until the caller has
-said all five digits or 4 seconds pass, then lets the model call again with the whole code. Every
+said all five digits, then lets the model call again with the whole code. If 4 seconds pass with
+no more digits, the lookup runs as called: a refusal after the caller has stopped (or after a
+mis-heard short code) made every retry wait and fail, and the caller heard nothing. Every
 mis-heard code still fails its check digit and gets "please say it again."
 
 ## Consequences
