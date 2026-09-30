@@ -1,5 +1,6 @@
-import { el } from '../dom.js';
+import { brandMark, el } from '../dom.js';
 import '../style.css';
+import { classifyCallState } from '../call-state.js';
 import captureUrl from './capture-worklet.ts?worker&url';
 import { floatFromPcm16, pcm16FromFloat } from './pcm.js';
 import playbackUrl from './playback-worklet.ts?worker&url';
@@ -11,13 +12,30 @@ const FRAME_SAMPLES = 512;
 /** role="status" is an implicit polite, atomic live region: call-state changes announce themselves. */
 const status = el('p', 'status', 'Not on a call.');
 status.setAttribute('role', 'status');
+status.dataset.state = 'idle';
+
+/** Sets the status text and, from that same text, the chip's visual state. */
+function setStatus(text: string): void {
+  status.textContent = text;
+  status.dataset.state = classifyCallState(text);
+}
 
 const transcriptHeading = el('h2', '', 'Transcript');
 transcriptHeading.id = 'transcript-heading';
 const log = el('ol', 'transcript');
 log.setAttribute('aria-live', 'polite');
 log.setAttribute('aria-labelledby', 'transcript-heading');
-const say = (line: string) => log.append(el('li', '', line));
+const say = (line: string) => log.append(el('li', 'log-entry', line));
+const sayTurn = (role: string, text: string) =>
+  log.append(
+    el(
+      'li',
+      `log-entry log-turn ${role}`,
+      el('span', 'log-speaker', role),
+      ' ',
+      el('span', 'log-text', text)
+    )
+  );
 
 /** Agent audio through the playback worklet; its played and flushed reports go to the host. */
 async function startPlayback(socket: WebSocket): Promise<(command: PlaybackCommand) => void> {
@@ -56,9 +74,10 @@ codeInput.autocomplete = 'off';
 /** A closure that ends the call in progress; cleared once the socket actually closes. */
 let hangUp: (() => void) | undefined;
 const button = el('button', '', 'Call') as HTMLButtonElement;
+button.dataset.action = 'call';
 
 async function call(): Promise<void> {
-  status.textContent = 'Calling…';
+  setStatus('Calling…');
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
   const url = new URL(`${scheme}://${location.host}/ws`);
   if (codeInput.value) url.searchParams.set('code', codeInput.value);
@@ -70,26 +89,27 @@ async function call(): Promise<void> {
       return play({ type: 'audio', samples: floatFromPcm16(new Uint8Array(data)) });
     const message = JSON.parse(data);
     if (message.type === 'turn' || message.type === 'flush') play(message);
-    if (message.type === 'transcript') say(`${message.role}: ${message.text}`);
+    if (message.type === 'transcript') sayTurn(message.role, message.text);
     if (message.type === 'trace') say(`Trace written: ${message.path}`);
     if (message.type === 'rejected') say(`Call rejected: ${message.reason}`);
     // The host ignores the microphone until Sonic is listening.
-    if (message.type === 'ready')
-      status.textContent = 'On a call. Ask for the status of a purchase order.';
+    if (message.type === 'ready') setStatus('On a call. Ask for the status of a purchase order.');
   };
   const mic = await startCapture(socket);
   socket.onclose = () => {
     mic.getTracks().forEach((track) => track.stop());
     hangUp = undefined;
     button.textContent = 'Call';
-    status.textContent = 'Call ended.';
+    button.dataset.action = 'call';
+    setStatus('Call ended.');
     say('Call ended.');
   };
   hangUp = () => {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: 'end' }));
   };
-  if (status.textContent === 'Calling…') status.textContent = 'Connecting, please wait…';
+  if (status.textContent === 'Calling…') setStatus('Connecting, please wait…');
   button.textContent = 'Hang up';
+  button.dataset.action = 'hangup';
 }
 
 button.addEventListener('click', async () => {
@@ -100,12 +120,17 @@ button.addEventListener('click', async () => {
 document
   .querySelector('main')
   ?.append(
-    el('h1', '', 'Supplier Line softphone'),
-    el('p', 'muted', 'Use headphones. Ask for the status of a purchase order.'),
-    codeLabel,
-    codeInput,
-    button,
-    status,
-    transcriptHeading,
-    log
+    el(
+      'header',
+      'page-header',
+      el('div', 'brand', brandMark(), el('h1', '', 'Supplier Line softphone')),
+      el('p', 'muted', 'Use headphones. Ask for the status of a purchase order.')
+    ),
+    el(
+      'section',
+      'panel call-card',
+      el('div', 'field-row', codeLabel, codeInput),
+      el('div', 'action-row', button, status)
+    ),
+    el('section', 'panel transcript-panel', transcriptHeading, log)
   );

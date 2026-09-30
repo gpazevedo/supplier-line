@@ -1,5 +1,5 @@
 import type { Trace } from 'traces/src/schema.js';
-import { el } from './dom.js';
+import { brandMark, el } from './dom.js';
 import { loadFile } from './load.js';
 import { renderTrace } from './render.js';
 import './style.css';
@@ -35,10 +35,14 @@ window.addEventListener('drop', (event) => {
   showFiles([...(event.dataTransfer?.files ?? [])]);
 });
 
-const controls = el('div', 'controls', filePicker());
+const controls = el('div', 'controls panel upload-panel', filePicker());
 app.append(
-  el('h1', '', 'Supplier Line trace viewer'),
-  el('p', 'muted', 'Drop trace JSON files anywhere on this page, or use a picker.'),
+  el(
+    'header',
+    'page-header',
+    el('div', 'brand', brandMark(), el('h1', '', 'Supplier Line trace viewer')),
+    el('p', 'muted', 'Drop trace JSON files anywhere on this page, or use a picker.')
+  ),
   controls,
   errors,
   output
