@@ -21,8 +21,9 @@
   --hangup-bg: #9c2b1f;
   --hangup-ink: #fff7ee;
 
-  /* One fixed value in both schemes: keeps planned/generated/heard at >=3:1 (WCAG 1.4.11). */
-  --track: #161b22;
+  /* Dark enough that planned/generated/heard (the darkest, --generated, is the binding
+     case) stay at >=3:1 (WCAG 1.4.11); overridden below so dark mode keeps its own value. */
+  --track: #171310;
   --planned: #56b4e9;
   --generated: #0072b2;
   --heard: #e69f00;
@@ -59,6 +60,7 @@
 
     --bargein: #ff9a5c;
     --fh: #d2a8ff;
+    --track: #161b22;
   }
 }
 
