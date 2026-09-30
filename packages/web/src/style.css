@@ -21,9 +21,11 @@
   --hangup-bg: #9c2b1f;
   --hangup-ink: #fff7ee;
 
-  /* Dark enough that planned/generated/heard (the darkest, --generated, is the binding
-     case) stay at >=3:1 (WCAG 1.4.11); overridden below so dark mode keeps its own value. */
-  --track: #171310;
+  /* A light stone track (matches --border) plus a dark outline on each fill and on the
+     track itself: the outline carries the >=3:1 boundary contrast (WCAG 1.4.11), so the
+     fills don't need to contrast the track by themselves. Dark mode reverts both below. */
+  --track: var(--border);
+  --bar-outline: #211c14;
   --planned: #56b4e9;
   --generated: #0072b2;
   --heard: #e69f00;
@@ -61,6 +63,7 @@
     --bargein: #ff9a5c;
     --fh: #d2a8ff;
     --track: #161b22;
+    --bar-outline: transparent;
   }
 }
 
@@ -452,12 +455,14 @@ input[type='file'] {
   position: relative;
   height: 1rem;
   background: var(--track);
+  border: 1px solid var(--bar-outline);
   border-radius: 3px;
 }
 
 .bar-fill {
   display: block;
   height: 100%;
+  border: 2px solid var(--bar-outline);
   border-radius: 3px;
 }
 
