@@ -1,9 +1,26 @@
 :root {
   color-scheme: light dark;
-  --bg: #ffffff;
-  --fg: #1b1f24;
-  --muted: #57606a;
-  --border: #c9d1d9;
+  --bg: #f5f1e8;
+  --surface: #ffffff;
+  --surface-strong: #efe8d8;
+  --ink: #211c14;
+  --muted: #6b6152;
+  --border: #ddd3bd;
+  --control-border: #8c7d63;
+  --accent: #8a4210;
+  --accent-ink: #fff7ee;
+
+  --state-idle: var(--muted);
+  --state-connecting: #8a5108;
+  --state-active: #1f6f46;
+  --state-ended: #4b5563;
+  --state-rejected: #9c2b1f;
+
+  --call-bg: #1f6f46;
+  --call-ink: #fff7ee;
+  --hangup-bg: #9c2b1f;
+  --hangup-ink: #fff7ee;
+
   /* One fixed value in both schemes: keeps planned/generated/heard at >=3:1 (WCAG 1.4.11). */
   --track: #161b22;
   --planned: #56b4e9;
@@ -11,61 +28,407 @@
   --heard: #e69f00;
   --bargein: #b34700;
   --fh: #7a3e9d;
+
   --label-width: 6rem;
   --value-width: 5rem;
+  --sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0d1117;
-    --fg: #e6edf3;
-    --muted: #9da7b3;
-    --border: #3d444d;
+    --bg: #171310;
+    --surface: #211b15;
+    --surface-strong: #2a221a;
+    --ink: #f3ecdf;
+    --muted: #b8ab95;
+    --border: #423527;
+    --control-border: #7d7060;
+    --accent: #e0863a;
+    --accent-ink: #1c1006;
+
+    --state-connecting: #e0a53c;
+    --state-active: #4fbf85;
+    --state-ended: #9aa7b8;
+    --state-rejected: #e2685a;
+
+    --call-bg: #4fbf85;
+    --call-ink: #10261a;
+    --hangup-bg: #e2685a;
+    --hangup-ink: #2a0e09;
+
     --bargein: #ff9a5c;
     --fh: #d2a8ff;
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--fg);
+  color: var(--ink);
   font:
-    16px/1.5 system-ui,
-    sans-serif;
+    16px/1.5 var(--sans);
 }
 
 main {
-  max-width: 52rem;
+  max-width: 40rem;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 1.5rem 1rem 3rem;
 }
 
 .muted {
   color: var(--muted);
 }
 
-.controls {
+/* Header */
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.brand {
   display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.brand-mark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  height: 1.4rem;
+}
+
+.brand-mark span {
+  display: block;
+  width: 0.3rem;
+  background: var(--accent);
+  border-radius: 1px;
+}
+
+.brand-mark span:nth-child(1) {
+  height: 40%;
+}
+.brand-mark span:nth-child(2) {
+  height: 90%;
+}
+.brand-mark span:nth-child(3) {
+  height: 60%;
+}
+.brand-mark span:nth-child(4) {
+  height: 100%;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.page-header .muted {
+  margin: 0.35rem 0 0;
+}
+
+/* Panels */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1.5rem;
+}
+
+.call-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.field-row label {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-top: 0;
+  margin-bottom: 0.4rem;
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: 1rem;
 }
 
+.upload-panel {
+  text-align: center;
+}
+
+.transcript-panel h2 {
+  margin-top: 0;
+}
+
+/* Controls */
+
+label {
+  display: block;
+  margin-top: 0.5rem;
+}
+
+input[type='password'] {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--control-border);
+  border-radius: 8px;
+}
+
+/* Target Size Minimum (2.5.8): at least 24x24 CSS px, regardless of the browser's own defaults. */
+button,
+select,
+input[type='file'],
+input[type='password'] {
+  min-height: 24px;
+  padding: 0.6rem 0.9rem;
+}
+
+button {
+  font: inherit;
+  font-weight: 700;
+  font-family: var(--sans);
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  cursor: pointer;
+  padding-inline: 1.5rem;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.1s ease;
+}
+
+button:hover:not(:disabled) {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button[data-action='call'] {
+  background: var(--call-bg);
+  color: var(--call-ink);
+  border-color: transparent;
+}
+
+button[data-action='hangup'] {
+  background: var(--hangup-bg);
+  color: var(--hangup-ink);
+  border-color: transparent;
+}
+
+.picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px dashed var(--control-border);
+  border-radius: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+input[type='file'] {
+  max-width: 100%;
+}
+
+/* Status chip: text differs per state, so meaning never depends on color alone. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  border: 1px solid var(--control-border);
+  color: var(--state-idle);
+}
+
+.status::before {
+  content: '';
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.status[data-state='connecting'] {
+  color: var(--state-connecting);
+}
+
+.status[data-state='active'] {
+  color: var(--state-active);
+}
+
+.status[data-state='active']::before {
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.status[data-state='ended'] {
+  color: var(--state-ended);
+}
+
+.status[data-state='rejected'] {
+  color: var(--state-rejected);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status[data-state='active']::before {
+    animation: none;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* Call / Connect log */
+
+.transcript {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.log-entry {
+  font-size: 0.9rem;
+  color: var(--muted);
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-turn {
+  max-width: 85%;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  border-bottom: none;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+}
+
+.log-turn.caller {
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.log-turn.assistant {
+  align-self: flex-end;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface-strong));
+  border-bottom-right-radius: 4px;
+}
+
+.log-speaker {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 0.2rem;
+}
+
+.log-turn.assistant .log-speaker {
+  color: var(--accent);
+}
+
+.log-text {
+  color: var(--ink);
+}
+
+/* Trace viewer */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
 .error {
-  border-left: 4px solid var(--bargein);
+  border-left: 4px solid var(--state-rejected);
   padding-left: 0.5rem;
   font-weight: 600;
+  color: var(--state-rejected);
+}
+
+.trace {
+  margin-bottom: 2rem;
 }
 
 .turn {
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0 1rem 0.5rem;
+  border-radius: 14px;
+  padding: 0.25rem 1.25rem 1rem;
   margin: 1rem 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .latency {
   font-weight: 400;
+  font-family: var(--mono);
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
@@ -79,6 +442,7 @@ main {
 
 .bar-value {
   text-align: right;
+  font-family: var(--mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -141,30 +505,34 @@ main {
   font-style: italic;
 }
 
-/* --fg carries >=16:1 contrast against --bg in both schemes, so it also clears 3:1 for focus. */
+/* --ink carries >=15:1 contrast against --bg and --surface in both schemes, so it also clears 3:1 for focus. */
 :focus-visible {
-  outline: 3px solid var(--fg);
+  outline: 3px solid var(--ink);
   outline-offset: 2px;
 }
 
-/* Target Size Minimum (2.5.8): at least 24x24 CSS px, regardless of the browser's own defaults. */
-button,
-select,
-input[type='file'],
-input[type='password'] {
-  min-height: 24px;
-  padding: 0.5rem 0.75rem;
-}
+@media (max-width: 360px) {
+  :root {
+    --label-width: 4rem;
+    --value-width: 3.5rem;
+  }
 
-label {
-  display: block;
-  margin-top: 0.5rem;
-}
+  main {
+    padding: 1rem 0.75rem 2rem;
+  }
 
-.status {
-  font-weight: 600;
-}
+  .panel,
+  .turn {
+    padding: 0.75rem;
+  }
 
-.transcript {
-  padding-left: 1.5rem;
+  .log-turn {
+    max-width: 100%;
+  }
+
+  .picker {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+  }
 }

@@ -7,3 +7,17 @@ export function el(tag: string, className: string, ...children: Child[]): HTMLEl
   node.append(...children);
   return node;
 }
+
+/** Purely decorative waveform mark next to the product name; hidden from the accessibility tree. */
+export function brandMark(): HTMLElement {
+  const mark = el(
+    'span',
+    'brand-mark',
+    el('span', ''),
+    el('span', ''),
+    el('span', ''),
+    el('span', '')
+  );
+  mark.setAttribute('aria-hidden', 'true');
+  return mark;
+}
