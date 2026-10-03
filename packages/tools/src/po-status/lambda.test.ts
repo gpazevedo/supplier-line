@@ -1,5 +1,6 @@
 import type { LexV2Event, LexV2Result } from 'aws-lambda';
 import { describe, expect, it } from 'vitest';
+import { getPoStatus } from './handler';
 import { lexFulfillment } from './lambda';
 
 /** A Lex V2 fulfillment event for the PoStatus intent, as Connect sends it. */
@@ -95,5 +96,17 @@ describe('Lex V2 fulfillment Lambda', () => {
     const result = await lexFulfillment(lexEvent(null));
     expect(result.sessionState.intent?.state).toBe('Failed');
     expect(messageText(result)).toMatch(/^Sorry, I didn't catch a purchase order code/);
+  });
+});
+
+describe('Connect and softphone parity', () => {
+  it.each([
+    ['po-status-a', '10482'],
+    ['po-status-b', '20931'],
+    ['not found', '00003'],
+  ])('gives the same answer through Lex and the tool for %s', async (_name, digits) => {
+    const tool = await getPoStatus({ po_code: `PO-${digits}` });
+    const lex = await lexFulfillment(lexEvent(digits));
+    expect(messageText(lex)).toBe(tool.rendering);
   });
 });
